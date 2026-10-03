@@ -46,10 +46,19 @@ export type GamePlatform =
   | "nintendo"
   | "mobile";
 
+export type UserRole = "admin" | "user";
+
 export interface User {
   id: string;
   username: string;
   passwordHash: string;
+  role: UserRole;
+}
+
+export interface Session {
+  id: string;
+  userId: string;
+  expiresAt: string;
 }
 
 export interface Game {

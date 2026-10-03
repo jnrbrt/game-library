@@ -1,12 +1,30 @@
 import Fastify from "fastify";
+import cookie from "@fastify/cookie";
+import { authRoutes } from "./routes/auth.js";
+import { requireAuth } from "./auth/require-auth.js";
 
 const app = Fastify({
   logger: true,
 });
 
+await app.register(cookie);
+
+await app.register(authRoutes, {
+  prefix: "/api/auth",
+});
+
 app.get("/api/health", async () => {
   return {
     status: "ok",
+  };
+});
+
+app.get("/api/protected-test", async (request) => {
+  const userId = await requireAuth(request);
+
+  return {
+    authenticated: true,
+    userId,
   };
 });
 
