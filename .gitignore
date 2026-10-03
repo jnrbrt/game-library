@@ -8,3 +8,9 @@ dist/
 
 .DS_Store
 Thumbs.db
+
+# Application data
+data/*.json
+
+# Backups
+backups/
