@@ -3,6 +3,7 @@ import cookie from "@fastify/cookie";
 import { authRoutes } from "./routes/auth.js";
 import { requireAuth } from "./auth/require-auth.js";
 import { gameRoutes } from "./routes/games.js";
+import { folderRoutes } from "./routes/folders.js";
 
 const app = Fastify({
   logger: true,
@@ -16,6 +17,10 @@ await app.register(authRoutes, {
 
 await app.register(gameRoutes, {
   prefix: "/api/games",
+});
+
+await app.register(folderRoutes, {
+  prefix: "/api/folders",
 });
 
 app.get("/api/health", async () => {
