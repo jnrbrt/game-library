@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFolder } from "../../api/folders";
+import { createFolder, updateFolder, deleteFolder } from "../../api/folders";
 import type { AuthUser } from "../../api/auth";
 import type { Folder } from "../../api/folders";
 import FolderTree from "../folders/FolderTree";
@@ -11,6 +11,8 @@ interface AppSidebarProps {
   onFolderSelect: (folderId: string | null) => void;
   onFolderCreated: (folder: Folder) => void;
   onLogout: () => Promise<void>;
+  onFolderUpdated: (folder: Folder) => void;
+  onFolderDeleted: (folderId: string) => void;
 }
 
 function AppSidebar({
@@ -19,11 +21,62 @@ function AppSidebar({
   selectedFolderId,
   onFolderSelect,
   onFolderCreated,
+  onFolderUpdated,
   onLogout,
+  onFolderDeleted,
 }: AppSidebarProps) {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [isSavingFolder, setIsSavingFolder] = useState(false);
+  const [actionFolder, setActionFolder] = useState<Folder | null>(null);
+  const [isRenamingFolder, setIsRenamingFolder] = useState(false);
+  const [renameFolderName, setRenameFolderName] = useState("");
+  const [isSavingRename, setIsSavingRename] = useState(false);
+  const [isDeletingFolder, setIsDeletingFolder] = useState(false);
+  const [confirmDeleteFolder, setConfirmDeleteFolder] = useState(false);
+
+  const handleRenameFolder = async () => {
+    if (!actionFolder || !renameFolderName.trim() || isSavingRename) {
+      return;
+    }
+
+    setIsSavingRename(true);
+
+    try {
+      const updatedFolder = await updateFolder(actionFolder.id, {
+        name: renameFolderName.trim(),
+      });
+
+      onFolderUpdated(updatedFolder);
+
+      setActionFolder(null);
+      setIsRenamingFolder(false);
+      setRenameFolderName("");
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSavingRename(false);
+    }
+  };
+
+  const handleDeleteFolder = async () => {
+    if (!actionFolder || isDeletingFolder) {
+      return;
+    }
+
+    setIsDeletingFolder(true);
+
+    try {
+      await deleteFolder(actionFolder.id);
+
+      onFolderDeleted(actionFolder.id);
+      setActionFolder(null);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsDeletingFolder(false);
+    }
+  };
 
   const handleCreateFolder = async () => {
     const name = folderName.trim();
@@ -132,6 +185,35 @@ function AppSidebar({
           folders={folders}
           selectedFolderId={selectedFolderId}
           onFolderSelect={onFolderSelect}
+          onFolderActions={(folder) => {
+            setActionFolder(folder);
+          }}
+          onFolderActionsClose={() => {
+            setActionFolder(null);
+          }}
+          actionFolderId={actionFolder?.id ?? null}
+          onFolderRename={(folder) => {
+            setActionFolder(folder);
+            setRenameFolderName(folder.name);
+            setIsRenamingFolder(true);
+          }}
+          isRenamingFolder={isRenamingFolder}
+          renameFolderName={renameFolderName}
+          onRenameFolderNameChange={setRenameFolderName}
+          onRenameSave={() => {
+            void handleRenameFolder();
+          }}
+          onFolderDelete={() => {
+            void handleDeleteFolder();
+          }}
+          confirmDeleteFolder={confirmDeleteFolder}
+          onDeleteRequest={() => {
+            setConfirmDeleteFolder(true);
+          }}
+          onDeleteCancel={() => {
+            setConfirmDeleteFolder(false);
+          }}
+          isDeletingFolder={isDeletingFolder}
         />
       </nav>
 

@@ -272,6 +272,22 @@ function LibraryPage() {
           onFolderCreated={(folder) => {
             setFolders((currentFolders) => [...currentFolders, folder]);
           }}
+          onFolderUpdated={(updatedFolder) => {
+            setFolders((currentFolders) =>
+              currentFolders.map((folder) =>
+                folder.id === updatedFolder.id ? updatedFolder : folder,
+              ),
+            );
+          }}
+          onFolderDeleted={(folderId) => {
+            setFolders((currentFolders) =>
+              currentFolders.filter((folder) => folder.id !== folderId),
+            );
+
+            if (selectedFolderId === folderId) {
+              setSelectedFolderId(null);
+            }
+          }}
           onLogout={handleLogout}
         />
 
