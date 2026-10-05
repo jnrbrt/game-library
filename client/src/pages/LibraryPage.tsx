@@ -1,20 +1,24 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { logout } from "../api/auth";
-import { useAuth } from "../auth/AuthContext";
 import {
   createGame,
+  deleteGame,
   getGames,
+  updateGame,
   type Game,
   type GameGenre,
   type GamePlatform,
   type GameStatus,
 } from "../api/games";
 
+import { logout } from "../api/auth";
+import { useAuth } from "../auth/AuthContext";
+
 import AppSidebar from "../components/layout/AppSidebar";
 import LibraryHeader from "../components/layout/LibraryHeader";
 import AddGameModal from "../components/games/AddGameModal";
+import GameDetailsModal from "../components/games/GameDetailsModal";
 import LibraryContent from "../components/games/LibraryContent";
 
 function LibraryPage() {
@@ -25,6 +29,9 @@ function LibraryPage() {
   const [loadingGames, setLoadingGames] = useState(true);
 
   const [isAddGameOpen, setIsAddGameOpen] = useState(false);
+  const [gameModalMode, setGameModalMode] = useState<"add" | "edit">("add");
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [editingGameId, setEditingGameId] = useState<string | null>(null);
 
   const [gameName, setGameName] = useState("");
   const [genres, setGenres] = useState<GameGenre[]>([]);
@@ -78,9 +85,10 @@ function LibraryPage() {
     setPlatforms([]);
     setDescription("");
     setFormError("");
+    setEditingGameId(null);
   };
 
-  const handleCloseAddGame = () => {
+  const handleCloseGameModal = () => {
     if (savingGame) {
       return;
     }
@@ -89,7 +97,39 @@ function LibraryPage() {
     resetForm();
   };
 
-  const handleCreateGame = async () => {
+  const openEditGame = (game: Game) => {
+    setGameModalMode("edit");
+    setEditingGameId(game.id);
+    setGameName(game.name);
+    setGenres(game.genres);
+    setStatus(game.status);
+    setRating(game.rating !== undefined ? game.rating.toString() : "");
+    setPlatforms(game.platforms);
+    setDescription(game.description ?? "");
+    setFormError("");
+    setSelectedGame(null);
+    setIsAddGameOpen(true);
+  };
+
+  const handleDeleteGame = async () => {
+    if (!selectedGame) {
+      return;
+    }
+
+    try {
+      await deleteGame(selectedGame.id);
+
+      setGames((current) =>
+        current.filter((game) => game.id !== selectedGame.id),
+      );
+
+      setSelectedGame(null);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleSubmitGame = async () => {
     setFormError("");
 
     if (!gameName.trim()) {
@@ -130,22 +170,44 @@ function LibraryPage() {
     setSavingGame(true);
 
     try {
-      const newGame = await createGame({
+      const input = {
         name: gameName.trim(),
         genres,
         status,
         platforms,
         ...(numericRating !== undefined ? { rating: numericRating } : {}),
         ...(description.trim() ? { description: description.trim() } : {}),
-      });
+      };
 
-      setGames((current) => [...current, newGame]);
+      if (gameModalMode === "edit") {
+        if (!editingGameId) {
+          setFormError("The selected game could not be found.");
+          return;
+        }
+
+        const updatedGame = await updateGame(editingGameId, input);
+
+        setGames((current) =>
+          current.map((game) =>
+            game.id === updatedGame.id ? updatedGame : game,
+          ),
+        );
+      } else {
+        const newGame = await createGame(input);
+
+        setGames((current) => [...current, newGame]);
+      }
 
       setIsAddGameOpen(false);
+      setSelectedGame(null);
       resetForm();
     } catch (error) {
       console.error(error);
-      setFormError("The game could not be created. Please try again.");
+      setFormError(
+        gameModalMode === "edit"
+          ? "The game could not be updated. Please try again."
+          : "The game could not be created. Please try again.",
+      );
     } finally {
       setSavingGame(false);
     }
@@ -159,17 +221,34 @@ function LibraryPage() {
         <main className="min-w-0 flex-1">
           <LibraryHeader
             onAddGame={() => {
-              setFormError("");
+              resetForm();
+              setGameModalMode("add");
               setIsAddGameOpen(true);
             }}
           />
 
-          <section className="mx-auto max-w-7xl px-6 py-8">
-            <LibraryContent games={games} loadingGames={loadingGames} />
+          <section className="w-full px-6 py-8">
+            <LibraryContent
+              games={games}
+              loadingGames={loadingGames}
+              onGameClick={setSelectedGame}
+            />
           </section>
+
+          <GameDetailsModal
+            game={selectedGame}
+            onClose={() => setSelectedGame(null)}
+            onEdit={() => {
+              if (selectedGame) {
+                openEditGame(selectedGame);
+              }
+            }}
+            onDelete={() => void handleDeleteGame()}
+          />
 
           <AddGameModal
             isOpen={isAddGameOpen}
+            mode={gameModalMode}
             gameName={gameName}
             genres={genres}
             status={status}
@@ -184,8 +263,8 @@ function LibraryPage() {
             onRatingChange={setRating}
             onTogglePlatform={togglePlatform}
             onDescriptionChange={setDescription}
-            onClose={handleCloseAddGame}
-            onCreateGame={() => void handleCreateGame()}
+            onClose={handleCloseGameModal}
+            onSubmit={() => void handleSubmitGame()}
           />
         </main>
       </div>

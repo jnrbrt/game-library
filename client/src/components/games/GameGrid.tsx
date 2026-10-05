@@ -3,13 +3,14 @@ import GameCard from "./GameCard";
 
 interface GameGridProps {
   games: Game[];
+  onGameClick: (game: Game) => void;
 }
 
-function GameGrid({ games }: GameGridProps) {
+function GameGrid({ games, onGameClick }: GameGridProps) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
       {games.map((game) => (
-        <GameCard key={game.id} game={game} />
+        <GameCard key={game.id} game={game} onClick={() => onGameClick(game)} />
       ))}
     </div>
   );

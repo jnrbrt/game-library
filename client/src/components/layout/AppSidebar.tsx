@@ -17,7 +17,7 @@ function AppSidebar({ user, onLogout }: AppSidebarProps) {
       <nav className="flex-1 p-4">
         <button
           type="button"
-          className="w-full rounded-lg bg-gray-800 px-4 py-3 text-left text-sm font-medium text-white"
+          className="w-full bg-gray-800 px-4 py-3 text-left text-sm font-medium text-white"
         >
           Library
         </button>
@@ -35,7 +35,7 @@ function AppSidebar({ user, onLogout }: AppSidebarProps) {
         <button
           type="button"
           onClick={onLogout}
-          className="w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium text-gray-400 transition hover:bg-gray-800 hover:text-white"
+          className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-400 transition hover:bg-gray-800 hover:text-white"
         >
           Sign out
         </button>

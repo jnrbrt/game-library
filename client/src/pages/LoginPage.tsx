@@ -12,7 +12,7 @@ function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-950 px-4">
-      <div className="w-full max-w-md rounded-xl border border-gray-800 bg-gray-900 p-8 shadow-2xl">
+      <div className="w-full max-w-md border border-gray-800 bg-gray-900 p-8 shadow-2xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white">Game Library</h1>
 
@@ -42,7 +42,7 @@ function LoginPage() {
               type="text"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              className="w-full rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+              className="w-full border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
               autoComplete="username"
             />
           </div>
@@ -60,14 +60,14 @@ function LoginPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+              className="w-full border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
               autoComplete="current-password"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-500"
+            className="w-full bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-500"
           >
             Sign in
           </button>

@@ -79,3 +79,20 @@ export const createGame = async (input: CreateGameInput): Promise<Game> => {
     body: JSON.stringify(input),
   });
 };
+
+export const updateGame = async (
+  id: string,
+  input: CreateGameInput,
+): Promise<Game> => {
+  return apiClient<Game>(`/games/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+};
+
+export const deleteGame = async (id: string): Promise<void> => {
+  await apiClient<{ success: boolean }>(`/games/${id}`, {
+    method: "DELETE",
+    body: JSON.stringify({}),
+  });
+};

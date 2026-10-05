@@ -2,6 +2,7 @@ import type { GameGenre, GamePlatform, GameStatus } from "../../api/games";
 
 interface AddGameModalProps {
   isOpen: boolean;
+  mode: "add" | "edit";
   gameName: string;
   genres: GameGenre[];
   status: GameStatus;
@@ -17,7 +18,7 @@ interface AddGameModalProps {
   onTogglePlatform: (platform: GamePlatform) => void;
   onDescriptionChange: (value: string) => void;
   onClose: () => void;
-  onCreateGame: () => void;
+  onSubmit: () => void;
 }
 
 const GENRES: GameGenre[] = [
@@ -80,6 +81,7 @@ const formatLabel = (value: string) => {
 
 function AddGameModal({
   isOpen,
+  mode,
   gameName,
   genres,
   status,
@@ -95,30 +97,37 @@ function AddGameModal({
   onTogglePlatform,
   onDescriptionChange,
   onClose,
-  onCreateGame,
+  onSubmit,
 }: AddGameModalProps) {
   if (!isOpen) {
     return null;
   }
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 px-4 py-8">
-      <div className="mx-auto w-full max-w-2xl rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-2xl">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-white">Add Game</h3>
+  const isEditMode = mode === "edit";
 
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={savingGame}
-            className="rounded-lg px-3 py-2 text-gray-400 transition hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            ✕
-          </button>
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 px-4 py-8 backdrop-blur-sm">
+      <div className="relative mx-auto w-full max-w-2xl overflow-hidden border border-gray-800 bg-gray-900 shadow-2xl">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent" />
+
+        <div className="relative border-b border-gray-800 px-7 py-6">
+          <div className="flex items-center justify-between gap-6">
+            <h3 className="text-2xl font-bold tracking-tight text-white">
+              {isEditMode ? "Edit Game" : "Add Game"}
+            </h3>
+
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={savingGame}
+              className="shrink-0 px-3 py-2 text-xl leading-none text-gray-500 transition hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        <div className="mt-8 space-y-6">
-          {/* Name */}
+        <div className="relative space-y-7 px-7 py-8">
           <div>
             <label
               htmlFor="game-name"
@@ -133,11 +142,10 @@ function AddGameModal({
               value={gameName}
               onChange={(event) => onGameNameChange(event.target.value)}
               placeholder="Enter game name"
-              className="w-full rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500"
+              className="w-full border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500"
             />
           </div>
 
-          {/* Genres */}
           <div>
             <p className="mb-3 text-sm font-medium text-gray-300">Genres</p>
 
@@ -150,7 +158,7 @@ function AddGameModal({
                     key={genre}
                     type="button"
                     onClick={() => onToggleGenre(genre)}
-                    className={`rounded-lg border px-3 py-2 text-sm transition ${
+                    className={`border px-3 py-2 text-sm transition ${
                       selected
                         ? "border-blue-500 bg-blue-600 text-white"
                         : "border-gray-700 bg-gray-950 text-gray-400 hover:border-gray-600 hover:text-white"
@@ -163,7 +171,6 @@ function AddGameModal({
             </div>
           </div>
 
-          {/* Status */}
           <div>
             <label
               htmlFor="game-status"
@@ -178,7 +185,7 @@ function AddGameModal({
               onChange={(event) =>
                 onStatusChange(event.target.value as GameStatus)
               }
-              className="w-full rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+              className="w-full border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
             >
               {STATUSES.map((item) => (
                 <option key={item} value={item}>
@@ -188,7 +195,6 @@ function AddGameModal({
             </select>
           </div>
 
-          {/* Rating */}
           <div>
             <label
               htmlFor="game-rating"
@@ -206,11 +212,10 @@ function AddGameModal({
               value={rating}
               onChange={(event) => onRatingChange(event.target.value)}
               placeholder="1.0 - 10.0"
-              className="w-full rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500"
+              className="w-full border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500"
             />
           </div>
 
-          {/* Platforms */}
           <div>
             <p className="mb-3 text-sm font-medium text-gray-300">Platforms</p>
 
@@ -223,7 +228,7 @@ function AddGameModal({
                     key={platform}
                     type="button"
                     onClick={() => onTogglePlatform(platform)}
-                    className={`rounded-lg border px-3 py-2 text-sm transition ${
+                    className={`border px-3 py-2 text-sm transition ${
                       selected
                         ? "border-blue-500 bg-blue-600 text-white"
                         : "border-gray-700 bg-gray-950 text-gray-400 hover:border-gray-600 hover:text-white"
@@ -236,7 +241,6 @@ function AddGameModal({
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label
               htmlFor="game-description"
@@ -251,36 +255,43 @@ function AddGameModal({
               onChange={(event) => onDescriptionChange(event.target.value)}
               placeholder="Write something about the game..."
               rows={5}
-              className="w-full resize-y rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500"
+              className="w-full resize-y border border-gray-700 bg-gray-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500"
             />
           </div>
 
-          {/* Error */}
           {formError && (
-            <p className="rounded-lg border border-red-900/50 bg-red-950/30 px-4 py-3 text-sm text-red-400">
+            <p className="border border-red-900/50 bg-red-950/30 px-4 py-3 text-sm text-red-400">
               {formError}
             </p>
           )}
         </div>
 
-        <div className="mt-8 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={savingGame}
-            className="rounded-lg bg-gray-800 px-4 py-2.5 text-sm font-semibold text-gray-300 transition hover:bg-gray-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
+        <div className="relative border-t border-gray-800 bg-gray-950/60 px-7 py-5">
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={savingGame}
+              className="border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm font-semibold text-gray-300 transition hover:bg-gray-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
 
-          <button
-            type="button"
-            onClick={onCreateGame}
-            disabled={savingGame}
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {savingGame ? "Adding..." : "Add Game"}
-          </button>
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={savingGame}
+              className="border border-blue-500/30 bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {savingGame
+                ? isEditMode
+                  ? "Saving..."
+                  : "Adding..."
+                : isEditMode
+                  ? "Save Changes"
+                  : "Add Game"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
