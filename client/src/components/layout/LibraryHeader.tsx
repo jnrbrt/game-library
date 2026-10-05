@@ -8,8 +8,6 @@ function LibraryHeader({ onAddGame }: LibraryHeaderProps) {
       <div className="flex w-full items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-white">Library</h2>
-
-          <p className="mt-1 text-sm text-gray-500">Your game collection</p>
         </div>
 
         <button

@@ -1,11 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Game } from "../../api/games";
+import {
+  addGameToFolder,
+  getFoldersForGame,
+  removeGameFromFolder,
+  type Folder,
+} from "../../api/folders";
 
 interface GameDetailsModalProps {
   game: Game | null;
+  folders: Folder[];
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onFoldersChanged: () => void;
 }
 
 const STATUS_STYLES: Record<
@@ -57,11 +65,72 @@ const formatLabel = (value: string) => {
 
 function GameDetailsModal({
   game,
+  folders,
   onClose,
   onEdit,
   onDelete,
+  onFoldersChanged,
 }: GameDetailsModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
+  const [originalFolderIds, setOriginalFolderIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!game) {
+      return;
+    }
+
+    const loadGameFolders = async () => {
+      try {
+        const gameFolders = await getFoldersForGame(game.id);
+
+        const folderIds = gameFolders.map((folder) => folder.id);
+
+        setOriginalFolderIds(folderIds);
+        setSelectedFolderIds(folderIds);
+      } catch (error) {
+        console.error(error);
+        setOriginalFolderIds([]);
+        setSelectedFolderIds([]);
+      }
+    };
+
+    void loadGameFolders();
+  }, [game]);
+
+  const [isSavingFolders, setIsSavingFolders] = useState(false);
+
+  const handleSaveFolders = async () => {
+    if (!game || isSavingFolders) {
+      return;
+    }
+
+    setIsSavingFolders(true);
+
+    try {
+      const foldersToAdd = selectedFolderIds.filter(
+        (folderId) => !originalFolderIds.includes(folderId),
+      );
+
+      const foldersToRemove = originalFolderIds.filter(
+        (folderId) => !selectedFolderIds.includes(folderId),
+      );
+
+      await Promise.all([
+        ...foldersToAdd.map((folderId) => addGameToFolder(folderId, game.id)),
+        ...foldersToRemove.map((folderId) =>
+          removeGameFromFolder(folderId, game.id),
+        ),
+      ]);
+
+      setOriginalFolderIds(selectedFolderIds);
+      onFoldersChanged();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSavingFolders(false);
+    }
+  };
 
   if (!game) {
     return null;
@@ -71,7 +140,14 @@ function GameDetailsModal({
   const isPlatinumed = game.status === "platinumed";
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 px-4 py-8 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/75 px-4 py-8 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div
         className={`relative mx-auto w-full max-w-2xl overflow-hidden border bg-gray-900 shadow-2xl ${
           isPlatinumed
@@ -168,6 +244,60 @@ function GameDetailsModal({
                 {game.description || "No description."}
               </p>
             </div>
+          </section>
+
+          <section className="border border-gray-800 bg-gray-950/50 p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Folders
+                </h4>
+
+                <p className="mt-1 text-xs text-gray-600">
+                  Organize this game into one or more folders.
+                </p>
+              </div>
+            </div>
+
+            {folders.length === 0 ? (
+              <p className="mt-4 text-sm text-gray-500">No folders yet.</p>
+            ) : (
+              <>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {folders.map((folder) => (
+                    <button
+                      key={folder.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedFolderIds((current) =>
+                          current.includes(folder.id)
+                            ? current.filter((id) => id !== folder.id)
+                            : [...current, folder.id],
+                        );
+                      }}
+                      className={`border px-3 py-1.5 text-sm transition ${
+                        selectedFolderIds.includes(folder.id)
+                          ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                          : "border-gray-700 bg-gray-900 text-gray-300 hover:border-gray-500 hover:bg-gray-800 hover:text-white"
+                      }`}
+                    >
+                      {folder.name}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-5 flex justify-end border-t border-gray-800 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveFolders()}
+                    disabled={isSavingFolders}
+                    className="border border-sky-500/40 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-300 transition hover:border-sky-400 hover:bg-sky-500/20 hover:text-sky-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSavingFolders ? "Saving..." : "Save folders"}
+                  </button>
+                </div>
+              </>
+            )}
           </section>
         </div>
 

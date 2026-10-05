@@ -21,6 +21,8 @@ import AddGameModal from "../components/games/AddGameModal";
 import GameDetailsModal from "../components/games/GameDetailsModal";
 import LibraryContent from "../components/games/LibraryContent";
 
+import { getFolders, getGamesInFolder, type Folder } from "../api/folders";
+
 function LibraryPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -43,23 +45,69 @@ function LibraryPage() {
   const [savingGame, setSavingGame] = useState(false);
   const [formError, setFormError] = useState("");
 
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
   const handleLogout = async () => {
     await logout();
     navigate("/login", { replace: true });
   };
 
-  useEffect(() => {
-    const loadGames = async () => {
-      try {
+  const loadVisibleGames = async () => {
+    setLoadingGames(true);
+
+    try {
+      if (selectedFolderId === null) {
         const data = await getGames();
         setGames(data);
-      } finally {
-        setLoadingGames(false);
+        return;
+      }
+
+      const data = await getGamesInFolder(selectedFolderId);
+      setGames(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingGames(false);
+    }
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadVisibleGames();
+  }, [selectedFolderId]);
+
+  useEffect(() => {
+    const loadFolders = async () => {
+      try {
+        const data = await getFolders();
+        setFolders(data);
+      } catch (error) {
+        console.error(error);
       }
     };
 
-    void loadGames();
+    void loadFolders();
   }, []);
+
+  useEffect(() => {
+    const loadVisibleGames = async () => {
+      try {
+        if (selectedFolderId === null) {
+          const data = await getGames();
+          setGames(data);
+          return;
+        }
+
+        const data = await getGamesInFolder(selectedFolderId);
+        setGames(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void loadVisibleGames();
+  }, [selectedFolderId]);
 
   const toggleGenre = (genre: GameGenre) => {
     setGenres((current) =>
@@ -216,7 +264,16 @@ function LibraryPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <div className="flex min-h-screen">
-        <AppSidebar user={user} onLogout={handleLogout} />
+        <AppSidebar
+          user={user}
+          folders={folders}
+          selectedFolderId={selectedFolderId}
+          onFolderSelect={setSelectedFolderId}
+          onFolderCreated={(folder) => {
+            setFolders((currentFolders) => [...currentFolders, folder]);
+          }}
+          onLogout={handleLogout}
+        />
 
         <main className="min-w-0 flex-1">
           <LibraryHeader
@@ -237,6 +294,7 @@ function LibraryPage() {
 
           <GameDetailsModal
             game={selectedGame}
+            folders={folders}
             onClose={() => setSelectedGame(null)}
             onEdit={() => {
               if (selectedGame) {
@@ -244,6 +302,9 @@ function LibraryPage() {
               }
             }}
             onDelete={() => void handleDeleteGame()}
+            onFoldersChanged={() => {
+              void loadVisibleGames();
+            }}
           />
 
           <AddGameModal
