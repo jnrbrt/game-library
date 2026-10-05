@@ -4,12 +4,18 @@ import { authRoutes } from "./routes/auth.js";
 import { requireAuth } from "./auth/require-auth.js";
 import { gameRoutes } from "./routes/games.js";
 import { folderRoutes } from "./routes/folders.js";
+import cors from "@fastify/cors";
 
 const app = Fastify({
   logger: true,
 });
 
 await app.register(cookie);
+
+await app.register(cors, {
+  origin: "http://localhost:5173",
+  credentials: true,
+});
 
 await app.register(authRoutes, {
   prefix: "/api/auth",

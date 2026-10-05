@@ -10,7 +10,11 @@ export const createSession = async (userId: string) => {
 export const getSessionUserId = async (
   sessionId: string,
 ): Promise<string | undefined> => {
+  console.log("SESSION DEBUG:", sessionId);
+
   const session = await sessionRepository.getById(sessionId);
+
+  console.log("SESSION FOUND:", session);
 
   return session?.userId;
 };
