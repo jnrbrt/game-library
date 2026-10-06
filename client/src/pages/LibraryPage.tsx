@@ -29,6 +29,7 @@ function LibraryPage() {
 
   const [games, setGames] = useState<Game[]>([]);
   const [loadingGames, setLoadingGames] = useState(true);
+  const [allGames, setAllGames] = useState<Game[]>([]);
 
   const [isAddGameOpen, setIsAddGameOpen] = useState(false);
   const [gameModalMode, setGameModalMode] = useState<"add" | "edit">("add");
@@ -47,6 +48,56 @@ function LibraryPage() {
 
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<GameStatus | null>(null);
+
+  const breadcrumbs = (() => {
+    if (selectedStatus !== null) {
+      const statusNames: Record<GameStatus, string> = {
+        finished: "Finished",
+        ongoing: "Ongoing",
+        paused: "Paused",
+        dropped: "Dropped",
+        "waiting-list": "Waiting List",
+        platinumed: "Platinumed",
+      };
+
+      return [
+        {
+          id: null,
+          name: statusNames[selectedStatus],
+        },
+      ];
+    }
+
+    if (selectedFolderId === null) {
+      return [
+        {
+          id: null,
+          name: "Library",
+        },
+      ];
+    }
+
+    const path: { id: string | null; name: string }[] = [];
+    let currentFolderId: string | null = selectedFolderId;
+
+    while (currentFolderId !== null) {
+      const folder = folders.find((item) => item.id === currentFolderId);
+
+      if (!folder) {
+        break;
+      }
+
+      path.unshift({
+        id: folder.id,
+        name: folder.name,
+      });
+
+      currentFolderId = folder.parentId;
+    }
+
+    return path;
+  })();
 
   const handleLogout = async () => {
     await logout();
@@ -59,7 +110,15 @@ function LibraryPage() {
     try {
       if (selectedFolderId === null) {
         const data = await getGames();
-        setGames(data);
+
+        setAllGames(data);
+
+        if (selectedStatus !== null) {
+          setGames(data.filter((game) => game.status === selectedStatus));
+        } else {
+          setGames(data);
+        }
+
         return;
       }
 
@@ -75,7 +134,7 @@ function LibraryPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadVisibleGames();
-  }, [selectedFolderId]);
+  }, [selectedFolderId, selectedStatus]);
 
   const loadFolders = async () => {
     try {
@@ -252,8 +311,10 @@ function LibraryPage() {
         <AppSidebar
           user={user}
           folders={folders}
+          allGames={allGames}
           selectedFolderId={selectedFolderId}
           onFolderSelect={setSelectedFolderId}
+          onStatusSelect={setSelectedStatus}
           onFolderCreated={(folder) => {
             setFolders((currentFolders) => [...currentFolders, folder]);
           }}
@@ -278,6 +339,11 @@ function LibraryPage() {
 
         <main className="min-w-0 flex-1">
           <LibraryHeader
+            breadcrumbs={breadcrumbs}
+            onBreadcrumbClick={(folderId) => {
+              setSelectedStatus(null);
+              setSelectedFolderId(folderId);
+            }}
             onAddGame={() => {
               resetForm();
               setGameModalMode("add");

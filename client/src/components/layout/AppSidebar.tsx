@@ -2,28 +2,33 @@ import { useState } from "react";
 import { createFolder, updateFolder, deleteFolder } from "../../api/folders";
 import type { AuthUser } from "../../api/auth";
 import type { Folder } from "../../api/folders";
+import type { Game, GameStatus } from "../../api/games";
 import FolderTree from "../folders/FolderTree";
 
 interface AppSidebarProps {
   user: AuthUser | null;
   folders: Folder[];
+  allGames: Game[];
   selectedFolderId: string | null;
   onFolderSelect: (folderId: string | null) => void;
   onFolderCreated: (folder: Folder) => void;
   onLogout: () => Promise<void>;
   onFolderUpdated: (folder: Folder) => void;
   onFolderDeleted: (folderId: string) => void;
+  onStatusSelect: (status: GameStatus | null) => void;
 }
 
 function AppSidebar({
   user,
   folders,
+  allGames,
   selectedFolderId,
   onFolderSelect,
   onFolderCreated,
   onFolderUpdated,
   onLogout,
   onFolderDeleted,
+  onStatusSelect,
 }: AppSidebarProps) {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [folderName, setFolderName] = useState("");
@@ -35,6 +40,16 @@ function AppSidebar({
   const [isDeletingFolder, setIsDeletingFolder] = useState(false);
   const [confirmDeleteFolder, setConfirmDeleteFolder] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const statusCounts = {
+    finished: allGames.filter((game) => game.status === "finished").length,
+    ongoing: allGames.filter((game) => game.status === "ongoing").length,
+    paused: allGames.filter((game) => game.status === "paused").length,
+    dropped: allGames.filter((game) => game.status === "dropped").length,
+    waitingList: allGames.filter((game) => game.status === "waiting-list")
+      .length,
+    platinumed: allGames.filter((game) => game.status === "platinumed").length,
+  };
 
   const handleRenameFolder = async () => {
     if (!actionFolder || !renameFolderName.trim() || isSavingRename) {
@@ -137,6 +152,115 @@ function AppSidebar({
             </div>
           </div>
           <nav className="flex-1 overflow-auto px-6 py-4">
+            <button
+              type="button"
+              onClick={() => {
+                onFolderSelect(null);
+                onStatusSelect(null);
+              }}
+              className={`mb-4 flex w-full items-center justify-between px-2 py-2 text-left text-sm font-medium transition ${
+                selectedFolderId === null
+                  ? "bg-gray-800 text-white"
+                  : "text-gray-400 hover:bg-gray-800 hover:text-white"
+              }`}
+            >
+              <span>Library</span>
+
+              <span className="text-xs text-gray-500">{allGames.length}</span>
+            </button>
+            <div className="mb-5">
+              <div className="mb-2 px-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Status
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFolderSelect(null);
+                    onStatusSelect("finished");
+                  }}
+                  className="flex w-full items-center justify-between px-2 py-1.5 text-left text-sm text-gray-400 transition hover:bg-gray-800 hover:text-white"
+                >
+                  <span>Finished</span>
+                  <span className="text-xs text-gray-500">
+                    {statusCounts.finished}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFolderSelect(null);
+                    onStatusSelect("ongoing");
+                  }}
+                  className="flex w-full items-center justify-between px-2 py-1.5 text-left text-sm text-gray-400 transition hover:bg-gray-800 hover:text-white"
+                >
+                  <span>Ongoing</span>
+                  <span className="text-xs text-gray-500">
+                    {statusCounts.ongoing}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFolderSelect(null);
+                    onStatusSelect("paused");
+                  }}
+                  className="flex w-full items-center justify-between px-2 py-1.5 text-left text-sm text-gray-400 transition hover:bg-gray-800 hover:text-white"
+                >
+                  <span>Paused</span>
+                  <span className="text-xs text-gray-500">
+                    {statusCounts.paused}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFolderSelect(null);
+                    onStatusSelect("dropped");
+                  }}
+                  className="flex w-full items-center justify-between px-2 py-1.5 text-left text-sm text-gray-400 transition hover:bg-gray-800 hover:text-white"
+                >
+                  <span>Dropped</span>
+                  <span className="text-xs text-gray-500">
+                    {statusCounts.dropped}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFolderSelect(null);
+                    onStatusSelect("waiting-list");
+                  }}
+                  className="flex w-full items-center justify-between px-2 py-1.5 text-left text-sm text-gray-400 transition hover:bg-gray-800 hover:text-white"
+                >
+                  <span>Waiting List</span>
+                  <span className="text-xs text-gray-500">
+                    {statusCounts.waitingList}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFolderSelect(null);
+                    onStatusSelect("platinumed");
+                  }}
+                  className="flex w-full items-center justify-between px-2 py-1.5 text-left text-sm text-gray-400 transition hover:bg-gray-800 hover:text-white"
+                >
+                  <span>Platinumed</span>
+                  <span className="text-xs text-gray-500">
+                    {statusCounts.platinumed}
+                  </span>
+                </button>
+              </div>
+            </div>
             <div className="mb-3 flex items-center justify-between px-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Folders
@@ -201,7 +325,10 @@ function AppSidebar({
             <FolderTree
               folders={folders}
               selectedFolderId={selectedFolderId}
-              onFolderSelect={onFolderSelect}
+              onFolderSelect={(folderId) => {
+                onStatusSelect(null);
+                onFolderSelect(folderId);
+              }}
               onFolderActions={(folder) => {
                 setActionFolder(folder);
               }}

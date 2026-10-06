@@ -269,20 +269,6 @@ function FolderTree({
 
   return (
     <div className="space-y-1">
-      <button
-        type="button"
-        onClick={() => onFolderSelect(null)}
-        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition ${
-          selectedFolderId === null
-            ? "bg-gray-800 text-white"
-            : "text-gray-400 hover:bg-gray-800/60 hover:text-gray-200"
-        }`}
-      >
-        <span className="text-gray-500">⌂</span>
-
-        <span>Library</span>
-      </button>
-
       {rootFolders.map((folder) => (
         <FolderNode
           key={folder.id}
