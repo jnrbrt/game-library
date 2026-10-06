@@ -71,7 +71,9 @@ function GameDetailsModal({
   onDelete,
   onFoldersChanged,
 }: GameDetailsModalProps) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeleteGameId, setConfirmDeleteGameId] = useState<string | null>(
+    null,
+  );
   const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
   const [originalFolderIds, setOriginalFolderIds] = useState<string[]>([]);
 
@@ -303,7 +305,7 @@ function GameDetailsModal({
         </div>
 
         <div className="relative border-t border-gray-800 bg-gray-950/60 px-7 py-5">
-          {confirmDelete ? (
+          {confirmDeleteGameId === game.id ? (
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-white">
@@ -318,7 +320,7 @@ function GameDetailsModal({
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setConfirmDelete(false)}
+                  onClick={() => setConfirmDeleteGameId(null)}
                   className="border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm font-semibold text-gray-300 transition hover:bg-gray-700 hover:text-white"
                 >
                   Cancel
@@ -337,7 +339,7 @@ function GameDetailsModal({
             <div className="flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => setConfirmDelete(true)}
+                onClick={() => setConfirmDeleteGameId(game.id)}
                 className="px-4 py-2.5 text-sm font-semibold text-red-400 transition hover:bg-red-950/40 hover:text-red-300"
               >
                 Delete

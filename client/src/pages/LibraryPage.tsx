@@ -49,7 +49,14 @@ function LibraryPage() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<GameStatus | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    const savedViewMode = localStorage.getItem("game-library-view-mode");
+
+    return savedViewMode === "list" ? "list" : "grid";
+  });
+  useEffect(() => {
+    localStorage.setItem("game-library-view-mode", viewMode);
+  }, [viewMode]);
 
   const breadcrumbs = (() => {
     if (selectedStatus !== null) {
@@ -212,9 +219,8 @@ function LibraryPage() {
     try {
       await deleteGame(selectedGame.id);
 
-      setGames((current) =>
-        current.filter((game) => game.id !== selectedGame.id),
-      );
+      await loadVisibleGames();
+      await loadFolders();
 
       setSelectedGame(null);
     } catch (error) {
