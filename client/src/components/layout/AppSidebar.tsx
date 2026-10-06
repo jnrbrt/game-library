@@ -90,7 +90,7 @@ function AppSidebar({
     try {
       const folder = await createFolder({
         name,
-        parentId: null,
+        parentId: selectedFolderId,
       });
 
       onFolderCreated(folder);
@@ -119,7 +119,7 @@ function AppSidebar({
         <p className="mt-1 text-xs text-gray-500">Personal collection</p>
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-4">
+      <nav className="flex-1 overflow-auto p-4">
         <div className="mb-3 flex items-center justify-between px-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
             Folders
