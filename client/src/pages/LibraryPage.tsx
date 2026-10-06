@@ -49,6 +49,7 @@ function LibraryPage() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<GameStatus | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const breadcrumbs = (() => {
     if (selectedStatus !== null) {
@@ -344,6 +345,8 @@ function LibraryPage() {
               setSelectedStatus(null);
               setSelectedFolderId(folderId);
             }}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
             onAddGame={() => {
               resetForm();
               setGameModalMode("add");
@@ -355,6 +358,7 @@ function LibraryPage() {
             <LibraryContent
               games={games}
               loadingGames={loadingGames}
+              viewMode={viewMode}
               onGameClick={setSelectedGame}
             />
           </section>

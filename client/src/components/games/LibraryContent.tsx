@@ -1,15 +1,18 @@
 import type { Game } from "../../api/games";
 import GameGrid from "./GameGrid";
+import GameList from "./GameList";
 
 interface LibraryContentProps {
   games: Game[];
   loadingGames: boolean;
+  viewMode: "grid" | "list";
   onGameClick: (game: Game) => void;
 }
 
 function LibraryContent({
   games,
   loadingGames,
+  viewMode,
   onGameClick,
 }: LibraryContentProps) {
   if (loadingGames) {
@@ -28,6 +31,10 @@ function LibraryContent({
         </p>
       </div>
     );
+  }
+
+  if (viewMode === "list") {
+    return <GameList games={games} onGameClick={onGameClick} />;
   }
 
   return <GameGrid games={games} onGameClick={onGameClick} />;
