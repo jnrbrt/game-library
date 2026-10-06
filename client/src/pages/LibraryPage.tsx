@@ -291,10 +291,16 @@ function LibraryPage() {
             game.id === updatedGame.id ? updatedGame : game,
           ),
         );
+        setAllGames((current) =>
+          current.map((game) =>
+            game.id === updatedGame.id ? updatedGame : game,
+          ),
+        );
       } else {
         const newGame = await createGame(input);
 
         setGames((current) => [...current, newGame]);
+        setAllGames((current) => [...current, newGame]);
       }
 
       setIsAddGameOpen(false);

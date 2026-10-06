@@ -51,6 +51,17 @@ function AppSidebar({
     platinumed: allGames.filter((game) => game.status === "platinumed").length,
   };
 
+  const platformCounts = {
+    pc: allGames.filter((game) => game.platforms.includes("pc")).length,
+    playstation: allGames.filter((game) =>
+      game.platforms.includes("playstation"),
+    ).length,
+    xbox: allGames.filter((game) => game.platforms.includes("xbox")).length,
+    nintendo: allGames.filter((game) => game.platforms.includes("nintendo"))
+      .length,
+    mobile: allGames.filter((game) => game.platforms.includes("mobile")).length,
+  };
+
   const handleRenameFolder = async () => {
     if (!actionFolder || !renameFolderName.trim() || isSavingRename) {
       return;
@@ -360,7 +371,74 @@ function AppSidebar({
               isDeletingFolder={isDeletingFolder}
             />
           </nav>
+          <div className="border-t border-gray-800 px-4 pb-4 pt-5">
+            {(() => {
+              const totalPlatforms =
+                platformCounts.pc +
+                platformCounts.playstation +
+                platformCounts.xbox +
+                platformCounts.nintendo +
+                platformCounts.mobile;
 
+              const platforms = [
+                {
+                  key: "pc",
+                  count: platformCounts.pc,
+                  color: "bg-gray-500",
+                },
+                {
+                  key: "playstation",
+                  count: platformCounts.playstation,
+                  color: "bg-blue-700",
+                },
+                {
+                  key: "xbox",
+                  count: platformCounts.xbox,
+                  color: "bg-green-700",
+                },
+                {
+                  key: "nintendo",
+                  count: platformCounts.nintendo,
+                  color: "bg-red-500",
+                },
+                {
+                  key: "mobile",
+                  count: platformCounts.mobile,
+                  color: "bg-yellow-500",
+                },
+              ].filter((platform) => platform.count > 0);
+
+              if (platforms.length === 0) {
+                return null;
+              }
+
+              return (
+                <>
+                  <div className="mb-2 px-1">
+                    <span className="text-[10px] font-semibold tracking-[0.18em] text-gray-600">
+                      Platform Distribution
+                    </span>
+                  </div>
+
+                  <div className="mx-1 mb-2 flex h-6 overflow-hidden border border-black bg-gray-800">
+                    {platforms.map((platform) => (
+                      <div
+                        key={platform.key}
+                        className={`${platform.color} flex items-center justify-center`}
+                        style={{
+                          width: `${(platform.count / totalPlatforms) * 100}%`,
+                        }}
+                      >
+                        <span className="text-xs font-bold leading-none text-white">
+                          {platform.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
           <div className="border-t border-gray-800 p-4">
             <div className="mb-3 px-2">
               <p className="text-xs text-gray-500">Signed in as</p>
