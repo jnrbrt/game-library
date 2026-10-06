@@ -6,6 +6,7 @@ export interface Folder {
   name: string;
   parentId: string | null;
   createdAt: string;
+  gameCount: number;
 }
 
 export interface CreateFolderInput {

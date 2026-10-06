@@ -16,7 +16,44 @@ export const folderRoutes = async (app: FastifyInstance): Promise<void> => {
 
     const folders = await folderRepository.getAll();
 
-    return folders.filter((folder) => folder.ownerId === userId);
+    const ownedFolders = folders.filter((folder) => folder.ownerId === userId);
+
+    return Promise.all(
+      ownedFolders.map(async (folder) => {
+        const descendantFolderIds = new Set<string>([folder.id]);
+
+        let foldersToCheck = [folder.id];
+
+        while (foldersToCheck.length > 0) {
+          const nextFolderIds = ownedFolders
+            .filter(
+              (candidate) =>
+                candidate.parentId !== null &&
+                foldersToCheck.includes(candidate.parentId),
+            )
+            .map((candidate) => candidate.id);
+
+          for (const folderId of nextFolderIds) {
+            descendantFolderIds.add(folderId);
+          }
+
+          foldersToCheck = nextFolderIds;
+        }
+
+        const relations = await folderGameRepository.getAll();
+
+        const gameIds = new Set(
+          relations
+            .filter((relation) => descendantFolderIds.has(relation.folderId))
+            .map((relation) => relation.gameId),
+        );
+
+        return {
+          ...folder,
+          gameCount: gameIds.size,
+        };
+      }),
+    );
   });
 
   app.post("/", async (request, reply) => {

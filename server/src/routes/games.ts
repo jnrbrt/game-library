@@ -115,6 +115,12 @@ export const gameRoutes = async (app: FastifyInstance): Promise<void> => {
       });
     }
 
+    const gameFolders = await folderGameRepository.getFoldersForGame(id);
+
+    for (const relation of gameFolders) {
+      await folderGameRepository.remove(relation.folderId, id);
+    }
+
     await gameRepository.delete(id);
 
     return {

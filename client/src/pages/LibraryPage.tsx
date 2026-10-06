@@ -77,37 +77,22 @@ function LibraryPage() {
     void loadVisibleGames();
   }, [selectedFolderId]);
 
+  const loadFolders = async () => {
+    try {
+      const data = await getFolders();
+      setFolders(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
-    const loadFolders = async () => {
-      try {
-        const data = await getFolders();
-        setFolders(data);
-      } catch (error) {
-        console.error(error);
-      }
+    const load = async () => {
+      await loadFolders();
     };
 
-    void loadFolders();
+    void load();
   }, []);
-
-  useEffect(() => {
-    const loadVisibleGames = async () => {
-      try {
-        if (selectedFolderId === null) {
-          const data = await getGames();
-          setGames(data);
-          return;
-        }
-
-        const data = await getGamesInFolder(selectedFolderId);
-        setGames(data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    void loadVisibleGames();
-  }, [selectedFolderId]);
 
   const toggleGenre = (genre: GameGenre) => {
     setGenres((current) =>
@@ -320,6 +305,7 @@ function LibraryPage() {
             onDelete={() => void handleDeleteGame()}
             onFoldersChanged={() => {
               void loadVisibleGames();
+              void loadFolders();
             }}
           />
 

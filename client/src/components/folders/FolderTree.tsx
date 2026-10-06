@@ -82,7 +82,11 @@ function FolderNode({
         >
           <span className="shrink-0 text-gray-500">▸</span>
 
-          <span className="truncate">{folder.name}</span>
+          <span className="break-words">{folder.name}</span>
+
+          <span className="shrink-0 text-xs text-gray-500">
+            {folder.gameCount}
+          </span>
         </button>
 
         <button

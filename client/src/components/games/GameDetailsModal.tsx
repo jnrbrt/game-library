@@ -116,12 +116,13 @@ function GameDetailsModal({
         (folderId) => !selectedFolderIds.includes(folderId),
       );
 
-      await Promise.all([
-        ...foldersToAdd.map((folderId) => addGameToFolder(folderId, game.id)),
-        ...foldersToRemove.map((folderId) =>
-          removeGameFromFolder(folderId, game.id),
-        ),
-      ]);
+      for (const folderId of foldersToAdd) {
+        await addGameToFolder(folderId, game.id);
+      }
+
+      for (const folderId of foldersToRemove) {
+        await removeGameFromFolder(folderId, game.id);
+      }
 
       setOriginalFolderIds(selectedFolderIds);
       onFoldersChanged();

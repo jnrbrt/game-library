@@ -34,6 +34,7 @@ function AppSidebar({
   const [isSavingRename, setIsSavingRename] = useState(false);
   const [isDeletingFolder, setIsDeletingFolder] = useState(false);
   const [confirmDeleteFolder, setConfirmDeleteFolder] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const handleRenameFolder = async () => {
     if (!actionFolder || !renameFolderName.trim() || isSavingRename) {
@@ -113,126 +114,170 @@ function AppSidebar({
   };
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-gray-800 bg-gray-900 md:flex md:flex-col">
-      <div className="border-b border-gray-800 px-6 py-5">
-        <h1 className="text-xl font-bold text-white">Game Library</h1>
-        <p className="mt-1 text-xs text-gray-500">Personal collection</p>
-      </div>
-
-      <nav className="flex-1 overflow-auto p-4">
-        <div className="mb-3 flex items-center justify-between px-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Folders
-          </span>
-
-          {!isCreatingFolder && (
-            <button
-              type="button"
-              onClick={() => setIsCreatingFolder(true)}
-              className="px-2 py-1 text-lg leading-none text-gray-500 transition hover:bg-gray-800 hover:text-white"
-              aria-label="Create folder"
-              title="Create folder"
-            >
-              +
-            </button>
-          )}
-        </div>
-
-        {isCreatingFolder && (
-          <div className="mb-3 border border-gray-800 bg-gray-950 p-3">
-            <input
-              type="text"
-              value={folderName}
-              onChange={(event) => setFolderName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  void handleCreateFolder();
-                }
-
-                if (event.key === "Escape") {
-                  handleCancelCreate();
-                }
-              }}
-              placeholder="Folder name"
-              autoFocus
-              disabled={isSavingFolder}
-              className="w-full border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white outline-none placeholder:text-gray-600 focus:border-gray-500"
-            />
-
-            <div className="mt-2 flex gap-2">
-              <button
-                type="button"
-                onClick={() => void handleCreateFolder()}
-                disabled={!folderName.trim() || isSavingFolder}
-                className="flex-1 bg-gray-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {isSavingFolder ? "Creating..." : "Create"}
-              </button>
+    <aside
+      className={`hidden shrink-0 border-r border-gray-800 bg-gray-900 md:flex md:flex-col ${
+        isSidebarOpen ? "w-64" : "w-12"
+      }`}
+    >
+      {isSidebarOpen ? (
+        <>
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-white">Game Library</h1>
 
               <button
                 type="button"
-                onClick={handleCancelCreate}
-                disabled={isSavingFolder}
-                className="px-3 py-2 text-xs font-semibold text-gray-500 transition hover:bg-gray-800 hover:text-white disabled:opacity-40"
+                onClick={() => setIsSidebarOpen(false)}
+                className="px-3 py-2 text-lg text-gray-500 transition hover:bg-gray-800 hover:text-white"
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
               >
-                Cancel
+                ‹
               </button>
             </div>
           </div>
-        )}
+          <nav className="flex-1 overflow-auto px-6 py-4">
+            <div className="mb-3 flex items-center justify-between px-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Folders
+              </span>
 
-        <FolderTree
-          folders={folders}
-          selectedFolderId={selectedFolderId}
-          onFolderSelect={onFolderSelect}
-          onFolderActions={(folder) => {
-            setActionFolder(folder);
-          }}
-          onFolderActionsClose={() => {
-            setActionFolder(null);
-          }}
-          actionFolderId={actionFolder?.id ?? null}
-          onFolderRename={(folder) => {
-            setActionFolder(folder);
-            setRenameFolderName(folder.name);
-            setIsRenamingFolder(true);
-          }}
-          isRenamingFolder={isRenamingFolder}
-          renameFolderName={renameFolderName}
-          onRenameFolderNameChange={setRenameFolderName}
-          onRenameSave={() => {
-            void handleRenameFolder();
-          }}
-          onFolderDelete={() => {
-            void handleDeleteFolder();
-          }}
-          confirmDeleteFolder={confirmDeleteFolder}
-          onDeleteRequest={() => {
-            setConfirmDeleteFolder(true);
-          }}
-          onDeleteCancel={() => {
-            setConfirmDeleteFolder(false);
-          }}
-          isDeletingFolder={isDeletingFolder}
-        />
-      </nav>
+              {!isCreatingFolder && (
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingFolder(true)}
+                  className="px-2 py-1 text-lg leading-none text-gray-500 transition hover:bg-gray-800 hover:text-white"
+                  aria-label="Create folder"
+                  title="Create folder"
+                >
+                  +
+                </button>
+              )}
+            </div>
 
-      <div className="border-t border-gray-800 p-4">
-        <div className="mb-3 px-2">
-          <p className="text-xs text-gray-500">Signed in as</p>
-          <p className="mt-1 truncate text-sm font-medium text-gray-200">
-            {user?.username}
-          </p>
-        </div>
+            {isCreatingFolder && (
+              <div className="mb-3 border border-gray-800 bg-gray-950 p-3">
+                <input
+                  type="text"
+                  value={folderName}
+                  onChange={(event) => setFolderName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      void handleCreateFolder();
+                    }
 
-        <button
-          type="button"
-          onClick={onLogout}
-          className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-400 transition hover:bg-gray-800 hover:text-white"
-        >
-          Sign out
-        </button>
-      </div>
+                    if (event.key === "Escape") {
+                      handleCancelCreate();
+                    }
+                  }}
+                  placeholder="Folder name"
+                  autoFocus
+                  disabled={isSavingFolder}
+                  className="w-full border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white outline-none placeholder:text-gray-600 focus:border-gray-500"
+                />
+
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleCreateFolder()}
+                    disabled={!folderName.trim() || isSavingFolder}
+                    className="flex-1 bg-gray-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {isSavingFolder ? "Creating..." : "Create"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCancelCreate}
+                    disabled={isSavingFolder}
+                    className="px-3 py-2 text-xs font-semibold text-gray-500 transition hover:bg-gray-800 hover:text-white disabled:opacity-40"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <FolderTree
+              folders={folders}
+              selectedFolderId={selectedFolderId}
+              onFolderSelect={onFolderSelect}
+              onFolderActions={(folder) => {
+                setActionFolder(folder);
+              }}
+              onFolderActionsClose={() => {
+                setActionFolder(null);
+              }}
+              actionFolderId={actionFolder?.id ?? null}
+              onFolderRename={(folder) => {
+                setActionFolder(folder);
+                setRenameFolderName(folder.name);
+                setIsRenamingFolder(true);
+              }}
+              isRenamingFolder={isRenamingFolder}
+              renameFolderName={renameFolderName}
+              onRenameFolderNameChange={setRenameFolderName}
+              onRenameSave={() => {
+                void handleRenameFolder();
+              }}
+              onFolderDelete={() => {
+                void handleDeleteFolder();
+              }}
+              confirmDeleteFolder={confirmDeleteFolder}
+              onDeleteRequest={() => {
+                setConfirmDeleteFolder(true);
+              }}
+              onDeleteCancel={() => {
+                setConfirmDeleteFolder(false);
+              }}
+              isDeletingFolder={isDeletingFolder}
+            />
+          </nav>
+
+          <div className="border-t border-gray-800 p-4">
+            <div className="mb-3 px-2">
+              <p className="text-xs text-gray-500">Signed in as</p>
+              <p className="mt-1 truncate text-sm font-medium text-gray-200">
+                {user?.username}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onLogout}
+              className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-400 transition hover:bg-gray-800 hover:text-white"
+            >
+              Sign out
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex justify-center pt-3">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(true)}
+              className="px-3 py-2 text-lg text-gray-500 transition hover:bg-gray-800 hover:text-white"
+              aria-label="Open sidebar"
+              title="Open sidebar"
+            >
+              ›
+            </button>
+          </div>
+
+          <div className="mt-auto flex justify-center border-t border-gray-800 p-2">
+            <button
+              type="button"
+              onClick={onLogout}
+              className="px-3 py-2 text-gray-500 transition hover:bg-gray-800 hover:text-white"
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              ↪
+            </button>
+          </div>
+        </>
+      )}
     </aside>
   );
 }
