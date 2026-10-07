@@ -1,3 +1,4 @@
+import type { DragEvent } from "react";
 import type { Game } from "../../api/games";
 
 interface GameListProps {
@@ -15,8 +16,16 @@ const STATUS_STYLES: Record<Game["status"], string> = {
 };
 
 function GameList({ games, onGameClick }: GameListProps) {
+  const handleDragStart = (
+    event: DragEvent<HTMLButtonElement>,
+    gameId: string,
+  ) => {
+    event.dataTransfer.setData("text/plain", gameId);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
   return (
-    <div className="flex flex-col border border-gray-800 gap-2">
+    <div className="flex flex-col gap-2 border border-gray-800">
       {games.map((game) => {
         const isPlatinumed = game.status === "platinumed";
 
@@ -24,7 +33,9 @@ function GameList({ games, onGameClick }: GameListProps) {
           <button
             key={game.id}
             type="button"
+            draggable
             onClick={() => onGameClick(game)}
+            onDragStart={(event) => handleDragStart(event, game.id)}
             className={`group relative flex min-h-16 w-full items-center border-b border-gray-800 bg-gray-900 text-left transition last:border-b-0 ${
               isPlatinumed
                 ? "bg-sky-950/20 shadow-[0_0_24px_rgba(56,189,248,0.08)] hover:bg-sky-950/30"

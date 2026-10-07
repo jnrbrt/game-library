@@ -1,3 +1,4 @@
+import type { DragEvent } from "react";
 import type { Game } from "../../api/games";
 
 interface GameCardProps {
@@ -24,10 +25,17 @@ const formatStatus = (status: Game["status"]) => {
 function GameCard({ game, onClick }: GameCardProps) {
   const isPlatinumed = game.status === "platinumed";
 
+  const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
+    event.dataTransfer.setData("text/plain", game.id);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
   return (
     <button
       type="button"
+      draggable
       onClick={onClick}
+      onDragStart={handleDragStart}
       className={`group relative min-h-44 w-full overflow-hidden border bg-gray-900 p-7 text-left transition duration-200 ${
         isPlatinumed
           ? "border-sky-500/40 shadow-[0_0_24px_rgba(56,189,248,0.12)] hover:border-sky-400/70 hover:shadow-[0_0_32px_rgba(56,189,248,0.2)]"

@@ -1,3 +1,4 @@
+import { useState, type DragEvent } from "react";
 import type { Folder } from "../../api/folders";
 
 interface FolderTreeProps {
@@ -17,6 +18,7 @@ interface FolderTreeProps {
   onDeleteRequest: (folder: Folder) => void;
   onDeleteCancel: () => void;
   isDeletingFolder: boolean;
+  onGameDrop: (folderId: string, gameId: string) => void;
 }
 
 interface FolderNodeProps {
@@ -38,6 +40,7 @@ interface FolderNodeProps {
   onDeleteRequest: (folder: Folder) => void;
   onDeleteCancel: () => void;
   isDeletingFolder: boolean;
+  onGameDrop: (folderId: string, gameId: string) => void;
 }
 
 function FolderNode({
@@ -59,35 +62,106 @@ function FolderNode({
   onDeleteRequest,
   onDeleteCancel,
   isDeletingFolder,
+  onGameDrop,
 }: FolderNodeProps) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const children = folders.filter((item) => item.parentId === folder.id);
 
   const isSelected = selectedFolderId === folder.id;
   const isActionsOpen = actionFolderId === folder.id;
 
+  const handleDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("text/plain")) {
+      return;
+    }
+
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("text/plain")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    const relatedTarget = event.relatedTarget;
+
+    if (
+      relatedTarget instanceof Node &&
+      event.currentTarget.contains(relatedTarget)
+    ) {
+      return;
+    }
+
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+
+    const gameId = event.dataTransfer.getData("text/plain");
+
+    if (!gameId) {
+      return;
+    }
+
+    onGameDrop(folder.id, gameId);
+  };
+
   return (
-    <div>
-      <div className="group flex items-center">
-        <button
-          type="button"
-          onClick={() => onFolderSelect(folder.id)}
-          className={`flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm transition ${
-            isSelected
-              ? "bg-gray-800 text-white"
-              : "text-gray-400 hover:bg-gray-800/60 hover:text-gray-200"
+    <div className="group">
+      <div className="flex items-center">
+        <div
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`min-w-0 flex-1 border transition ${
+            isDragOver
+              ? "border-sky-500 bg-sky-500/15 shadow-[0_0_18px_rgba(14,165,233,0.18)]"
+              : "border-transparent"
           }`}
-          style={{
-            paddingLeft: `${12 + depth * 20}px`,
-          }}
         >
-          <span className="shrink-0 text-gray-500">▸</span>
+          <button
+            type="button"
+            onClick={() => onFolderSelect(folder.id)}
+            className={`flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm transition ${
+              isDragOver
+                ? "text-sky-200"
+                : isSelected
+                  ? "bg-gray-800 text-white"
+                  : "text-gray-400 hover:bg-gray-800/60 hover:text-gray-200"
+            }`}
+            style={{
+              paddingLeft: `${12 + depth * 20}px`,
+            }}
+          >
+            <span
+              className={`shrink-0 transition ${
+                isDragOver ? "text-sky-300" : "text-gray-500"
+              }`}
+            >
+              ▸
+            </span>
 
-          <span className="break-words">{folder.name}</span>
+            <span className="break-words">{folder.name}</span>
 
-          <span className="shrink-0 text-xs text-gray-500">
-            {folder.gameCount}
-          </span>
-        </button>
+            <span
+              className={`shrink-0 text-xs ${
+                isDragOver ? "text-sky-300" : "text-gray-500"
+              }`}
+            >
+              {folder.gameCount}
+            </span>
+          </button>
+        </div>
 
         <button
           type="button"
@@ -241,6 +315,7 @@ function FolderNode({
           onDeleteRequest={onDeleteRequest}
           onDeleteCancel={onDeleteCancel}
           isDeletingFolder={isDeletingFolder}
+          onGameDrop={onGameDrop}
         />
       ))}
     </div>
@@ -264,6 +339,7 @@ function FolderTree({
   onDeleteRequest,
   onDeleteCancel,
   isDeletingFolder,
+  onGameDrop,
 }: FolderTreeProps) {
   const rootFolders = folders.filter((folder) => folder.parentId === null);
 
@@ -290,6 +366,7 @@ function FolderTree({
           onDeleteRequest={onDeleteRequest}
           onDeleteCancel={onDeleteCancel}
           isDeletingFolder={isDeletingFolder}
+          onGameDrop={onGameDrop}
         />
       ))}
     </div>

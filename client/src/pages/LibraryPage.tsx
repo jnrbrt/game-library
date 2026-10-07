@@ -21,7 +21,12 @@ import AddGameModal from "../components/games/AddGameModal";
 import GameDetailsModal from "../components/games/GameDetailsModal";
 import LibraryContent from "../components/games/LibraryContent";
 
-import { getFolders, getGamesInFolder, type Folder } from "../api/folders";
+import {
+  addGameToFolder,
+  getFolders,
+  getGamesInFolder,
+  type Folder,
+} from "../api/folders";
 
 function LibraryPage() {
   const navigate = useNavigate();
@@ -54,6 +59,7 @@ function LibraryPage() {
 
     return savedViewMode === "list" ? "list" : "grid";
   });
+
   useEffect(() => {
     localStorage.setItem("game-library-view-mode", viewMode);
   }, [viewMode]);
@@ -160,6 +166,17 @@ function LibraryPage() {
 
     void load();
   }, []);
+
+  const handleGameDrop = async (folderId: string, gameId: string) => {
+    try {
+      await addGameToFolder(folderId, gameId);
+
+      await loadFolders();
+      await loadVisibleGames();
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const toggleGenre = (genre: GameGenre) => {
     setGenres((current) =>
@@ -346,6 +363,9 @@ function LibraryPage() {
             if (selectedFolderId === folderId) {
               setSelectedFolderId(null);
             }
+          }}
+          onGameDrop={(folderId, gameId) => {
+            void handleGameDrop(folderId, gameId);
           }}
           onLogout={handleLogout}
         />

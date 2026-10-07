@@ -16,6 +16,7 @@ interface AppSidebarProps {
   onFolderUpdated: (folder: Folder) => void;
   onFolderDeleted: (folderId: string) => void;
   onStatusSelect: (status: GameStatus | null) => void;
+  onGameDrop: (folderId: string, gameId: string) => void;
 }
 
 function AppSidebar({
@@ -29,6 +30,7 @@ function AppSidebar({
   onLogout,
   onFolderDeleted,
   onStatusSelect,
+  onGameDrop,
 }: AppSidebarProps) {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [folderName, setFolderName] = useState("");
@@ -162,6 +164,7 @@ function AppSidebar({
               </button>
             </div>
           </div>
+
           <nav className="flex-1 overflow-auto px-6 py-4">
             <button
               type="button"
@@ -179,6 +182,7 @@ function AppSidebar({
 
               <span className="text-xs text-gray-500">{allGames.length}</span>
             </button>
+
             <div className="mb-5">
               <div className="mb-2 px-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -272,6 +276,7 @@ function AppSidebar({
                 </button>
               </div>
             </div>
+
             <div className="mb-3 flex items-center justify-between px-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Folders
@@ -369,8 +374,10 @@ function AppSidebar({
                 setConfirmDeleteFolder(false);
               }}
               isDeletingFolder={isDeletingFolder}
+              onGameDrop={onGameDrop}
             />
           </nav>
+
           <div className="border-t border-gray-800 px-4 pb-4 pt-5">
             {(() => {
               const totalPlatforms =
@@ -439,6 +446,7 @@ function AppSidebar({
               );
             })()}
           </div>
+
           <div className="border-t border-gray-800 p-4">
             <div className="mb-3 px-2">
               <p className="text-xs text-gray-500">Signed in as</p>
