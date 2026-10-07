@@ -19,6 +19,8 @@ interface FolderTreeProps {
   onDeleteCancel: () => void;
   isDeletingFolder: boolean;
   onGameDrop: (folderId: string, gameId: string) => void;
+  onFolderDrop: (folderId: string, sourceFolderId: string) => void;
+  onFolderDropToRoot: (sourceFolderId: string) => void;
 }
 
 interface FolderNodeProps {
@@ -41,6 +43,7 @@ interface FolderNodeProps {
   onDeleteCancel: () => void;
   isDeletingFolder: boolean;
   onGameDrop: (folderId: string, gameId: string) => void;
+  onFolderDrop: (folderId: string, sourceFolderId: string) => void;
 }
 
 function FolderNode({
@@ -63,6 +66,7 @@ function FolderNode({
   onDeleteCancel,
   isDeletingFolder,
   onGameDrop,
+  onFolderDrop,
 }: FolderNodeProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -71,8 +75,18 @@ function FolderNode({
   const isSelected = selectedFolderId === folder.id;
   const isActionsOpen = actionFolderId === folder.id;
 
+  const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
+    event.dataTransfer.setData("application/x-folder-id", folder.id);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
   const handleDragEnter = (event: DragEvent<HTMLDivElement>) => {
-    if (!event.dataTransfer.types.includes("text/plain")) {
+    const types = event.dataTransfer.types;
+
+    if (
+      !types.includes("application/x-game-id") &&
+      !types.includes("application/x-folder-id")
+    ) {
       return;
     }
 
@@ -81,7 +95,12 @@ function FolderNode({
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (!event.dataTransfer.types.includes("text/plain")) {
+    const types = event.dataTransfer.types;
+
+    if (
+      !types.includes("application/x-game-id") &&
+      !types.includes("application/x-folder-id")
+    ) {
       return;
     }
 
@@ -106,7 +125,20 @@ function FolderNode({
     event.preventDefault();
     setIsDragOver(false);
 
-    const gameId = event.dataTransfer.getData("text/plain");
+    const sourceFolderId = event.dataTransfer.getData(
+      "application/x-folder-id",
+    );
+
+    if (sourceFolderId) {
+      if (sourceFolderId === folder.id) {
+        return;
+      }
+
+      onFolderDrop(folder.id, sourceFolderId);
+      return;
+    }
+
+    const gameId = event.dataTransfer.getData("application/x-game-id");
 
     if (!gameId) {
       return;
@@ -131,6 +163,8 @@ function FolderNode({
         >
           <button
             type="button"
+            draggable
+            onDragStart={handleDragStart}
             onClick={() => onFolderSelect(folder.id)}
             className={`flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm transition ${
               isDragOver
@@ -316,6 +350,7 @@ function FolderNode({
           onDeleteCancel={onDeleteCancel}
           isDeletingFolder={isDeletingFolder}
           onGameDrop={onGameDrop}
+          onFolderDrop={onFolderDrop}
         />
       ))}
     </div>
@@ -340,11 +375,67 @@ function FolderTree({
   onDeleteCancel,
   isDeletingFolder,
   onGameDrop,
+  onFolderDrop,
+  onFolderDropToRoot,
 }: FolderTreeProps) {
+  const [isRootDragOver, setIsRootDragOver] = useState(false);
+
   const rootFolders = folders.filter((folder) => folder.parentId === null);
 
+  const handleRootDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("application/x-folder-id")) {
+      return;
+    }
+
+    event.preventDefault();
+    setIsRootDragOver(true);
+  };
+
+  const handleRootDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("application/x-folder-id")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleRootDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    const relatedTarget = event.relatedTarget;
+
+    if (
+      relatedTarget instanceof Node &&
+      event.currentTarget.contains(relatedTarget)
+    ) {
+      return;
+    }
+
+    setIsRootDragOver(false);
+  };
+
+  const handleRootDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsRootDragOver(false);
+
+    const sourceFolderId = event.dataTransfer.getData(
+      "application/x-folder-id",
+    );
+
+    if (!sourceFolderId) {
+      return;
+    }
+
+    onFolderDropToRoot(sourceFolderId);
+  };
+
   return (
-    <div className="space-y-1">
+    <div
+      className="space-y-1"
+      onDragEnter={handleRootDragEnter}
+      onDragOver={handleRootDragOver}
+      onDragLeave={handleRootDragLeave}
+      onDrop={handleRootDrop}
+    >
       {rootFolders.map((folder) => (
         <FolderNode
           key={folder.id}
@@ -367,8 +458,19 @@ function FolderTree({
           onDeleteCancel={onDeleteCancel}
           isDeletingFolder={isDeletingFolder}
           onGameDrop={onGameDrop}
+          onFolderDrop={onFolderDrop}
         />
       ))}
+
+      <div
+        className={`min-h-12 border border-dashed px-3 py-3 text-center text-xs transition ${
+          isRootDragOver
+            ? "border-sky-500 bg-sky-500/10 text-sky-300"
+            : "border-transparent text-transparent"
+        }`}
+      >
+        {isRootDragOver ? "Move folder to root" : "."}
+      </div>
     </div>
   );
 }

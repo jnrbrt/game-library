@@ -4,6 +4,7 @@ import type { Game } from "../../api/games";
 interface GameListProps {
   games: Game[];
   onGameClick: (game: Game) => void;
+  sourceFolderId: string | null;
 }
 
 const STATUS_STYLES: Record<Game["status"], string> = {
@@ -15,12 +16,20 @@ const STATUS_STYLES: Record<Game["status"], string> = {
   platinumed: "bg-sky-400",
 };
 
-function GameList({ games, onGameClick }: GameListProps) {
+function GameList({ games, onGameClick, sourceFolderId }: GameListProps) {
   const handleDragStart = (
     event: DragEvent<HTMLButtonElement>,
     gameId: string,
   ) => {
-    event.dataTransfer.setData("text/plain", gameId);
+    event.dataTransfer.setData("application/x-game-id", gameId);
+
+    if (sourceFolderId !== null) {
+      event.dataTransfer.setData(
+        "application/x-source-folder-id",
+        sourceFolderId,
+      );
+    }
+
     event.dataTransfer.effectAllowed = "move";
   };
 

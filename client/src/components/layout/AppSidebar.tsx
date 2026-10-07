@@ -17,6 +17,8 @@ interface AppSidebarProps {
   onFolderDeleted: (folderId: string) => void;
   onStatusSelect: (status: GameStatus | null) => void;
   onGameDrop: (folderId: string, gameId: string) => void;
+  onFolderDrop: (folderId: string, sourceFolderId: string) => void;
+  onFolderDropToRoot: (sourceFolderId: string) => void;
 }
 
 function AppSidebar({
@@ -31,6 +33,8 @@ function AppSidebar({
   onFolderDeleted,
   onStatusSelect,
   onGameDrop,
+  onFolderDrop,
+  onFolderDropToRoot,
 }: AppSidebarProps) {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [folderName, setFolderName] = useState("");
@@ -375,6 +379,8 @@ function AppSidebar({
               }}
               isDeletingFolder={isDeletingFolder}
               onGameDrop={onGameDrop}
+              onFolderDrop={onFolderDrop}
+              onFolderDropToRoot={onFolderDropToRoot}
             />
           </nav>
 

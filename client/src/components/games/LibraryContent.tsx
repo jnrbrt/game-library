@@ -7,6 +7,7 @@ interface LibraryContentProps {
   loadingGames: boolean;
   viewMode: "grid" | "list";
   onGameClick: (game: Game) => void;
+  sourceFolderId: string | null;
 }
 
 function LibraryContent({
@@ -14,6 +15,7 @@ function LibraryContent({
   loadingGames,
   viewMode,
   onGameClick,
+  sourceFolderId,
 }: LibraryContentProps) {
   if (loadingGames) {
     return <p className="text-sm text-gray-500">Loading games...</p>;
@@ -34,10 +36,22 @@ function LibraryContent({
   }
 
   if (viewMode === "list") {
-    return <GameList games={games} onGameClick={onGameClick} />;
+    return (
+      <GameList
+        games={games}
+        onGameClick={onGameClick}
+        sourceFolderId={sourceFolderId}
+      />
+    );
   }
 
-  return <GameGrid games={games} onGameClick={onGameClick} />;
+  return (
+    <GameGrid
+      games={games}
+      onGameClick={onGameClick}
+      sourceFolderId={sourceFolderId}
+    />
+  );
 }
 
 export default LibraryContent;

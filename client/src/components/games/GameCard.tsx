@@ -4,6 +4,7 @@ import type { Game } from "../../api/games";
 interface GameCardProps {
   game: Game;
   onClick: () => void;
+  sourceFolderId: string | null;
 }
 
 const STATUS_STYLES: Record<Game["status"], string> = {
@@ -22,11 +23,19 @@ const formatStatus = (status: Game["status"]) => {
     .join(" ");
 };
 
-function GameCard({ game, onClick }: GameCardProps) {
+function GameCard({ game, onClick, sourceFolderId }: GameCardProps) {
   const isPlatinumed = game.status === "platinumed";
 
   const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
-    event.dataTransfer.setData("text/plain", game.id);
+    event.dataTransfer.setData("application/x-game-id", game.id);
+
+    if (sourceFolderId !== null) {
+      event.dataTransfer.setData(
+        "application/x-source-folder-id",
+        sourceFolderId,
+      );
+    }
+
     event.dataTransfer.effectAllowed = "move";
   };
 

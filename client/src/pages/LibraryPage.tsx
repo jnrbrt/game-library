@@ -25,6 +25,8 @@ import {
   addGameToFolder,
   getFolders,
   getGamesInFolder,
+  removeGameFromFolder,
+  updateFolder,
   type Folder,
 } from "../api/folders";
 
@@ -54,6 +56,9 @@ function LibraryPage() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<GameStatus | null>(null);
+  const [isGameDragging, setIsGameDragging] = useState(false);
+  const [isRemoveDropActive, setIsRemoveDropActive] = useState(false);
+
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     const savedViewMode = localStorage.getItem("game-library-view-mode");
 
@@ -176,6 +181,116 @@ function LibraryPage() {
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const handleRemoveGameFromFolder = async (gameId: string) => {
+    if (selectedFolderId === null) {
+      return;
+    }
+
+    try {
+      await removeGameFromFolder(selectedFolderId, gameId);
+
+      await loadFolders();
+      await loadVisibleGames();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleFolderDrop = async (folderId: string, sourceFolderId: string) => {
+    try {
+      await updateFolder(sourceFolderId, {
+        parentId: folderId,
+      });
+
+      await loadFolders();
+      await loadVisibleGames();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleFolderDropToRoot = async (sourceFolderId: string) => {
+    try {
+      await updateFolder(sourceFolderId, {
+        parentId: null,
+      });
+
+      await loadFolders();
+      await loadVisibleGames();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleLibraryDragStart = (event: React.DragEvent<HTMLElement>) => {
+    if (!event.dataTransfer.types.includes("application/x-game-id")) {
+      return;
+    }
+
+    if (selectedFolderId === null) {
+      return;
+    }
+
+    setIsGameDragging(true);
+  };
+
+  const handleLibraryDragEnd = () => {
+    setIsGameDragging(false);
+    setIsRemoveDropActive(false);
+  };
+
+  const handleRemoveDropDragEnter = (
+    event: React.DragEvent<HTMLDivElement>,
+  ) => {
+    if (!event.dataTransfer.types.includes("application/x-game-id")) {
+      return;
+    }
+
+    event.preventDefault();
+    setIsRemoveDropActive(true);
+  };
+
+  const handleRemoveDropDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("application/x-game-id")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setIsRemoveDropActive(true);
+  };
+
+  const handleRemoveDropDragLeave = (
+    event: React.DragEvent<HTMLDivElement>,
+  ) => {
+    const relatedTarget = event.relatedTarget;
+
+    if (
+      relatedTarget instanceof Node &&
+      event.currentTarget.contains(relatedTarget)
+    ) {
+      return;
+    }
+
+    setIsRemoveDropActive(false);
+  };
+
+  const handleRemoveDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    setIsGameDragging(false);
+    setIsRemoveDropActive(false);
+
+    const gameId = event.dataTransfer.getData("application/x-game-id");
+
+    if (!gameId) {
+      return;
+    }
+
+    await handleRemoveGameFromFolder(gameId);
   };
 
   const toggleGenre = (genre: GameGenre) => {
@@ -367,6 +482,12 @@ function LibraryPage() {
           onGameDrop={(folderId, gameId) => {
             void handleGameDrop(folderId, gameId);
           }}
+          onFolderDrop={(folderId, sourceFolderId) => {
+            void handleFolderDrop(folderId, sourceFolderId);
+          }}
+          onFolderDropToRoot={(sourceFolderId) => {
+            void handleFolderDropToRoot(sourceFolderId);
+          }}
           onLogout={handleLogout}
         />
 
@@ -386,13 +507,36 @@ function LibraryPage() {
             }}
           />
 
-          <section className="w-full px-6 py-8">
+          <section
+            className="w-full px-6 py-8"
+            onDragStart={handleLibraryDragStart}
+            onDragEnd={handleLibraryDragEnd}
+          >
             <LibraryContent
               games={games}
               loadingGames={loadingGames}
               viewMode={viewMode}
               onGameClick={setSelectedGame}
+              sourceFolderId={selectedFolderId}
             />
+
+            {selectedFolderId !== null && isGameDragging && (
+              <div
+                onDragEnter={handleRemoveDropDragEnter}
+                onDragOver={handleRemoveDropDragOver}
+                onDragLeave={handleRemoveDropDragLeave}
+                onDrop={(event) => void handleRemoveDrop(event)}
+                className={`mt-6 flex min-h-16 w-full items-center justify-center border-2 border-dashed px-6 text-sm font-semibold transition ${
+                  isRemoveDropActive
+                    ? "border-red-400 bg-red-500/10 text-red-300 shadow-[0_0_24px_rgba(248,113,113,0.08)]"
+                    : "border-gray-800 bg-gray-900/30 text-gray-600"
+                }`}
+              >
+                {isRemoveDropActive
+                  ? "Release to remove from folder"
+                  : "Drag here to remove from folder"}
+              </div>
+            )}
           </section>
 
           <GameDetailsModal
