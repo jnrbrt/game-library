@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -20,6 +20,9 @@ import LibraryHeader from "../components/layout/LibraryHeader";
 import AddGameModal from "../components/games/AddGameModal";
 import GameDetailsModal from "../components/games/GameDetailsModal";
 import LibraryContent from "../components/games/LibraryContent";
+import LibraryToolbar, {
+  type SortOption,
+} from "../components/games/LibraryToolbar";
 
 import {
   addGameToFolder,
@@ -29,6 +32,21 @@ import {
   updateFolder,
   type Folder,
 } from "../api/folders";
+
+const SORT_STORAGE_KEY = "game-library-sort";
+
+const DEFAULT_SORT: SortOption = "name-asc";
+
+const isSortOption = (value: string | null): value is SortOption => {
+  return (
+    value === "name-asc" ||
+    value === "name-desc" ||
+    value === "rating-desc" ||
+    value === "rating-asc" ||
+    value === "created-desc" ||
+    value === "created-asc"
+  );
+};
 
 function LibraryPage() {
   const navigate = useNavigate();
@@ -56,6 +74,21 @@ function LibraryPage() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<GameStatus | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedGenres, setSelectedGenres] = useState<GameGenre[]>([]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<GamePlatform[]>(
+    [],
+  );
+  const [minRating, setMinRating] = useState("");
+  const [maxRating, setMaxRating] = useState("");
+
+  const [sortOption, setSortOption] = useState<SortOption>(() => {
+    const savedSort = localStorage.getItem(SORT_STORAGE_KEY);
+
+    return isSortOption(savedSort) ? savedSort : DEFAULT_SORT;
+  });
+
   const [isGameDragging, setIsGameDragging] = useState(false);
   const [isRemoveDropActive, setIsRemoveDropActive] = useState(false);
 
@@ -68,6 +101,10 @@ function LibraryPage() {
   useEffect(() => {
     localStorage.setItem("game-library-view-mode", viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem(SORT_STORAGE_KEY, sortOption);
+  }, [sortOption]);
 
   const breadcrumbs = (() => {
     if (selectedStatus !== null) {
@@ -151,8 +188,11 @@ function LibraryPage() {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadVisibleGames();
+    const load = async () => {
+      await loadVisibleGames();
+    };
+
+    void load();
   }, [selectedFolderId, selectedStatus]);
 
   const loadFolders = async () => {
@@ -171,6 +211,138 @@ function LibraryPage() {
 
     void load();
   }, []);
+
+  const filteredAndSortedGames = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLocaleLowerCase();
+
+    const parsedMinRating =
+      minRating.trim() === "" ? undefined : Number(minRating);
+    const parsedMaxRating =
+      maxRating.trim() === "" ? undefined : Number(maxRating);
+
+    const filtered = games.filter((game) => {
+      if (
+        normalizedSearch &&
+        !game.name.toLocaleLowerCase().includes(normalizedSearch)
+      ) {
+        return false;
+      }
+
+      if (selectedStatus !== null && game.status !== selectedStatus) {
+        return false;
+      }
+
+      if (
+        selectedGenres.length > 0 &&
+        !selectedGenres.some((genre) => game.genres.includes(genre))
+      ) {
+        return false;
+      }
+
+      if (
+        selectedPlatforms.length > 0 &&
+        !selectedPlatforms.some((platform) => game.platforms.includes(platform))
+      ) {
+        return false;
+      }
+
+      if (
+        parsedMinRating !== undefined &&
+        Number.isFinite(parsedMinRating) &&
+        (game.rating === undefined || game.rating < parsedMinRating)
+      ) {
+        return false;
+      }
+
+      if (
+        parsedMaxRating !== undefined &&
+        Number.isFinite(parsedMaxRating) &&
+        (game.rating === undefined || game.rating > parsedMaxRating)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      switch (sortOption) {
+        case "name-asc":
+          return a.name.localeCompare(b.name, undefined, {
+            sensitivity: "base",
+          });
+
+        case "name-desc":
+          return b.name.localeCompare(a.name, undefined, {
+            sensitivity: "base",
+          });
+
+        case "rating-desc": {
+          const aRating = a.rating ?? -1;
+          const bRating = b.rating ?? -1;
+
+          if (aRating !== bRating) {
+            return bRating - aRating;
+          }
+
+          return a.name.localeCompare(b.name, undefined, {
+            sensitivity: "base",
+          });
+        }
+
+        case "rating-asc": {
+          const aRating = a.rating ?? 11;
+          const bRating = b.rating ?? 11;
+
+          if (aRating !== bRating) {
+            return aRating - bRating;
+          }
+
+          return a.name.localeCompare(b.name, undefined, {
+            sensitivity: "base",
+          });
+        }
+
+        case "created-desc": {
+          const createdDifference =
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+          if (createdDifference !== 0) {
+            return createdDifference;
+          }
+
+          return a.name.localeCompare(b.name, undefined, {
+            sensitivity: "base",
+          });
+        }
+
+        case "created-asc": {
+          const createdDifference =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+
+          if (createdDifference !== 0) {
+            return createdDifference;
+          }
+
+          return a.name.localeCompare(b.name, undefined, {
+            sensitivity: "base",
+          });
+        }
+
+        default:
+          return 0;
+      }
+    });
+  }, [
+    games,
+    searchQuery,
+    selectedStatus,
+    selectedGenres,
+    selectedPlatforms,
+    minRating,
+    maxRating,
+    sortOption,
+  ]);
 
   const handleGameDrop = async (folderId: string, gameId: string) => {
     try {
@@ -423,6 +595,7 @@ function LibraryPage() {
             game.id === updatedGame.id ? updatedGame : game,
           ),
         );
+
         setAllGames((current) =>
           current.map((game) =>
             game.id === updatedGame.id ? updatedGame : game,
@@ -440,6 +613,7 @@ function LibraryPage() {
       resetForm();
     } catch (error) {
       console.error(error);
+
       setFormError(
         gameModalMode === "edit"
           ? "The game could not be updated. Please try again."
@@ -458,8 +632,17 @@ function LibraryPage() {
           folders={folders}
           allGames={allGames}
           selectedFolderId={selectedFolderId}
-          onFolderSelect={setSelectedFolderId}
-          onStatusSelect={setSelectedStatus}
+          onFolderSelect={(folderId) => {
+            setSelectedFolderId(folderId);
+            setSelectedStatus(null);
+          }}
+          onStatusSelect={(status) => {
+            setSelectedStatus(status);
+
+            if (status !== null) {
+              setSelectedFolderId(null);
+            }
+          }}
           onFolderCreated={(folder) => {
             setFolders((currentFolders) => [...currentFolders, folder]);
           }}
@@ -512,13 +695,50 @@ function LibraryPage() {
             onDragStart={handleLibraryDragStart}
             onDragEnd={handleLibraryDragEnd}
           >
+            <LibraryToolbar
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              selectedStatus={selectedStatus}
+              onStatusChange={(nextStatus) => {
+                setSelectedStatus(nextStatus);
+
+                if (nextStatus !== null) {
+                  setSelectedFolderId(null);
+                }
+              }}
+              selectedGenres={selectedGenres}
+              onGenresChange={setSelectedGenres}
+              selectedPlatforms={selectedPlatforms}
+              onPlatformsChange={setSelectedPlatforms}
+              minRating={minRating}
+              maxRating={maxRating}
+              onMinRatingChange={setMinRating}
+              onMaxRatingChange={setMaxRating}
+              sortOption={sortOption}
+              onSortChange={setSortOption}
+            />
+
             <LibraryContent
-              games={games}
+              games={filteredAndSortedGames}
               loadingGames={loadingGames}
               viewMode={viewMode}
               onGameClick={setSelectedGame}
               sourceFolderId={selectedFolderId}
             />
+
+            {!loadingGames &&
+              games.length > 0 &&
+              filteredAndSortedGames.length === 0 && (
+                <div className="border border-dashed border-gray-800 bg-gray-900/40 p-12 text-center">
+                  <h3 className="text-lg font-semibold text-gray-300">
+                    No games found
+                  </h3>
+
+                  <p className="mt-2 text-sm text-gray-500">
+                    Try changing your search or filters.
+                  </p>
+                </div>
+              )}
 
             {selectedFolderId !== null && isGameDragging && (
               <div

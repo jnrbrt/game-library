@@ -148,8 +148,8 @@ function FolderNode({
   };
 
   return (
-    <div className="group">
-      <div className="flex items-center">
+    <div className="group min-w-0">
+      <div className="flex min-w-0 items-center">
         <div
           onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
@@ -185,7 +185,9 @@ function FolderNode({
               ▸
             </span>
 
-            <span className="break-words">{folder.name}</span>
+            <span className="min-w-0 flex-1 truncate" title={folder.name}>
+              {folder.name}
+            </span>
 
             <span
               className={`shrink-0 text-xs ${
@@ -268,7 +270,10 @@ function FolderNode({
                 Delete folder
               </p>
 
-              <p className="mb-3 text-sm text-gray-400">
+              <p
+                className="mb-3 truncate text-sm text-gray-400"
+                title={folder.name}
+              >
                 Delete "{folder.name}"?
               </p>
 
@@ -294,7 +299,10 @@ function FolderNode({
             </>
           ) : (
             <>
-              <p className="mb-3 truncate text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <p
+                className="mb-3 truncate text-xs font-semibold uppercase tracking-wider text-gray-500"
+                title={folder.name}
+              >
                 {folder.name}
               </p>
 
@@ -430,7 +438,7 @@ function FolderTree({
 
   return (
     <div
-      className="space-y-1"
+      className="min-w-0 space-y-1"
       onDragEnter={handleRootDragEnter}
       onDragOver={handleRootDragOver}
       onDragLeave={handleRootDragLeave}
