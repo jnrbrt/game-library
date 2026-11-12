@@ -46,9 +46,9 @@ const MEDIA_TYPES: {
   label: string;
   color: string;
 }[] = [
-  { value: "movie", label: "Movie", color: "bg-blue-700" },
-  { value: "series", label: "Show", color: "bg-purple-700" },
-  { value: "book", label: "Book", color: "bg-amber-600" },
+  { value: "movie", label: "Movie", color: "bg-gray-500" },
+  { value: "series", label: "Show", color: "bg-red-400" },
+  { value: "book", label: "Book", color: "bg-green-400" },
 ];
 
 function getMaxSidebarWidth() {

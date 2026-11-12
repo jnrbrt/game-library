@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { logout } from "../api/auth";
@@ -17,12 +17,17 @@ import {
   addMediaToFolder,
   getMediaFolders,
   getMediaInFolder,
+  removeMediaFromFolder,
   updateMediaFolder,
   type MediaFolder,
 } from "../api/media-folders";
 
 import MediaSidebar from "../components/layout/MediaSidebar";
-import MediaCard from "../components/media/MediaCard";
+import LibraryHeader from "../components/layout/LibraryHeader";
+import MediaContent from "../components/media/MediaContent";
+import MediaToolbar, {
+  type MediaSortOption,
+} from "../components/media/MediaToolbar";
 import AddMediaModal from "../components/media/AddMediaModal";
 import MediaDetailsModal from "../components/media/MediaDetailsModal";
 
@@ -33,6 +38,17 @@ const STATUS_LABELS: Record<MediaStatus, string> = {
   dropped: "Dropped",
   "waiting-list": "Waiting List",
 };
+
+const SORT_STORAGE_KEY = "media-library-sort";
+const DEFAULT_SORT: MediaSortOption = "name-asc";
+
+const isSortOption = (value: string | null): value is MediaSortOption =>
+  value === "name-asc" ||
+  value === "name-desc" ||
+  value === "rating-desc" ||
+  value === "rating-asc" ||
+  value === "created-desc" ||
+  value === "created-asc";
 
 function MediaLibraryPage() {
   const navigate = useNavigate();
@@ -51,6 +67,34 @@ function MediaLibraryPage() {
   const [loadingFolder, setLoadingFolder] = useState(false);
   const [folderError, setFolderError] = useState("");
   const [folderRefreshVersion, setFolderRefreshVersion] = useState(0);
+
+  // Same search / filters / sorting as Games, with Media-specific type and score.
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedGenres, setSelectedGenres] = useState<MediaGenre[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<MediaType[]>([]);
+  const [minScore, setMinScore] = useState("");
+  const [maxScore, setMaxScore] = useState("");
+  const [sortOption, setSortOption] = useState<MediaSortOption>(() => {
+    const saved = localStorage.getItem(SORT_STORAGE_KEY);
+    return isSortOption(saved) ? saved : DEFAULT_SORT;
+  });
+
+  const [isMediaDragging, setIsMediaDragging] = useState(false);
+  const [isRemoveDropActive, setIsRemoveDropActive] = useState(false);
+
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() =>
+    localStorage.getItem("media-library-view-mode") === "list"
+      ? "list"
+      : "grid",
+  );
+
+  useEffect(() => {
+    localStorage.setItem("media-library-view-mode", viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem(SORT_STORAGE_KEY, sortOption);
+  }, [sortOption]);
 
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
 
@@ -162,15 +206,108 @@ function MediaLibraryPage() {
     });
   }, [media, folderMediaIds, selectedFolderId, selectedStatus]);
 
-  const currentFolder = folders.find(
-    (folder) => folder.id === selectedFolderId,
-  );
-  const pageTitle =
-    selectedStatus !== null
-      ? STATUS_LABELS[selectedStatus]
-      : selectedFolderId !== null
-        ? (currentFolder?.name ?? "Folder")
-        : "Library";
+  const filteredAndSortedMedia = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase();
+    const min = minScore.trim() === "" ? undefined : Number(minScore);
+    const max = maxScore.trim() === "" ? undefined : Number(maxScore);
+
+    const filtered = visibleMedia.filter((item) => {
+      if (query && !item.title.toLocaleLowerCase().includes(query)) {
+        return false;
+      }
+      if (
+        selectedGenres.length > 0 &&
+        !selectedGenres.some((genre) => item.genres.includes(genre))
+      ) {
+        return false;
+      }
+      if (selectedTypes.length > 0 && !selectedTypes.includes(item.type)) {
+        return false;
+      }
+      if (
+        min !== undefined &&
+        Number.isFinite(min) &&
+        (item.score === undefined || item.score < min)
+      ) {
+        return false;
+      }
+      if (
+        max !== undefined &&
+        Number.isFinite(max) &&
+        (item.score === undefined || item.score > max)
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    const byTitle = (a: MediaItem, b: MediaItem) =>
+      a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+
+    return [...filtered].sort((a, b) => {
+      switch (sortOption) {
+        case "name-asc":
+          return byTitle(a, b);
+        case "name-desc":
+          return byTitle(b, a);
+        case "rating-desc": {
+          const difference = (b.score ?? -1) - (a.score ?? -1);
+          return difference || byTitle(a, b);
+        }
+        case "rating-asc": {
+          const difference = (a.score ?? 11) - (b.score ?? 11);
+          return difference || byTitle(a, b);
+        }
+        case "created-desc": {
+          const difference =
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return difference || byTitle(a, b);
+        }
+        case "created-asc": {
+          const difference =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          return difference || byTitle(a, b);
+        }
+        default:
+          return 0;
+      }
+    });
+  }, [
+    visibleMedia,
+    searchQuery,
+    selectedGenres,
+    selectedTypes,
+    minScore,
+    maxScore,
+    sortOption,
+  ]);
+
+  // Use the same breadcrumb structure as the Game Library header.
+  const breadcrumbs = useMemo(() => {
+    if (selectedStatus !== null) {
+      return [{ id: null, name: STATUS_LABELS[selectedStatus] }];
+    }
+
+    if (selectedFolderId === null) {
+      return [{ id: null, name: "Library" }];
+    }
+
+    const path: { id: string | null; name: string }[] = [];
+    let currentFolderId: string | null = selectedFolderId;
+
+    while (currentFolderId !== null) {
+      const folder = folders.find((item) => item.id === currentFolderId);
+
+      if (!folder) {
+        break;
+      }
+
+      path.unshift({ id: folder.id, name: folder.name });
+      currentFolderId = folder.parentId;
+    }
+
+    return path.length > 0 ? path : [{ id: null, name: "Library" }];
+  }, [folders, selectedFolderId, selectedStatus]);
 
   const refreshFolders = async () => {
     try {
@@ -219,6 +356,69 @@ function MediaLibraryPage() {
     } catch (err) {
       console.error(err);
       window.alert("Media could not be added to this folder.");
+    }
+  };
+
+  // Drag media out of the currently opened folder, just like Games.
+  const handleLibraryDragStart = (event: DragEvent<HTMLElement>) => {
+    if (
+      selectedFolderId !== null &&
+      event.dataTransfer.types.includes("application/x-media-id")
+    ) {
+      // The sidebar copies items; the red drop zone removes folder membership.
+      event.dataTransfer.effectAllowed = "copyMove";
+      setIsMediaDragging(true);
+    }
+  };
+
+  const handleLibraryDragEnd = () => {
+    setIsMediaDragging(false);
+    setIsRemoveDropActive(false);
+  };
+
+  const handleRemoveDropDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("application/x-media-id")) {
+      return;
+    }
+    event.preventDefault();
+    setIsRemoveDropActive(true);
+  };
+
+  const handleRemoveDropDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!event.dataTransfer.types.includes("application/x-media-id")) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setIsRemoveDropActive(true);
+  };
+
+  const handleRemoveDropDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    const related = event.relatedTarget;
+    if (related instanceof Node && event.currentTarget.contains(related)) {
+      return;
+    }
+    setIsRemoveDropActive(false);
+  };
+
+  const handleRemoveDrop = async (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsMediaDragging(false);
+    setIsRemoveDropActive(false);
+
+    const mediaId = event.dataTransfer.getData("application/x-media-id");
+    if (!mediaId || selectedFolderId === null) {
+      return;
+    }
+
+    try {
+      await removeMediaFromFolder(selectedFolderId, mediaId);
+      await refreshFolders();
+      refreshFolderContent();
+    } catch (err) {
+      console.error(err);
+      window.alert("Media could not be removed from this folder.");
     }
   };
 
@@ -436,80 +636,114 @@ function MediaLibraryPage() {
         />
 
         <main className="min-w-0 flex-1">
-          <header className="flex items-center justify-between gap-4 border-b border-gray-800 px-6 py-5">
-            <h1 className="min-w-0 truncate text-2xl font-bold text-white">
-              {pageTitle}
-            </h1>
+          <LibraryHeader
+            breadcrumbs={breadcrumbs}
+            onBreadcrumbClick={(folderId) => {
+              setSelectedStatus(null);
+              setSelectedFolderId(folderId);
+            }}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onAddGame={openAddMedia}
+            addButtonLabel="Add Media"
+          />
 
-            <button
-              type="button"
-              onClick={openAddMedia}
-              className="shrink-0 bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
-            >
-              + Add Media
-            </button>
-          </header>
+          <section
+            className="w-full px-6 py-8"
+            onDragStart={handleLibraryDragStart}
+            onDragEnd={handleLibraryDragEnd}
+          >
+            <MediaToolbar
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              selectedStatus={selectedStatus}
+              onStatusChange={(nextStatus) => {
+                setSelectedStatus(nextStatus);
+                if (nextStatus !== null) {
+                  setSelectedFolderId(null);
+                }
+              }}
+              selectedGenres={selectedGenres}
+              onGenresChange={setSelectedGenres}
+              selectedTypes={selectedTypes}
+              onTypesChange={setSelectedTypes}
+              minScore={minScore}
+              maxScore={maxScore}
+              onMinScoreChange={setMinScore}
+              onMaxScoreChange={setMaxScore}
+              sortOption={sortOption}
+              onSortChange={setSortOption}
+            />
 
-          <section className="px-6 py-8">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-200">
-                {selectedFolderId !== null || selectedStatus !== null
-                  ? pageTitle
-                  : "All Media"}
-              </h2>
-
-              <span className="text-sm text-gray-500">
-                {visibleMedia.length} items
-              </span>
-            </div>
+            {!loading && error && (
+              <p className="text-sm text-red-400">{error}</p>
+            )}
+            {!loading && folderError && (
+              <p className="text-sm text-red-400">{folderError}</p>
+            )}
 
             {(loading || loadingFolder) && (
               <p className="text-sm text-gray-500">Loading media...</p>
             )}
 
-            {!loading && error && (
-              <p className="text-sm text-red-400">{error}</p>
-            )}
-
-            {!loading && folderError && (
-              <p className="text-sm text-red-400">{folderError}</p>
-            )}
+            {!loading &&
+              !loadingFolder &&
+              !error &&
+              !folderError &&
+              (filteredAndSortedMedia.length > 0 ||
+                (media.length === 0 &&
+                  selectedStatus === null &&
+                  selectedFolderId === null)) && (
+                <MediaContent
+                  media={filteredAndSortedMedia}
+                  loadingMedia={false}
+                  viewMode={viewMode}
+                  onMediaClick={setSelectedMedia}
+                  sourceFolderId={selectedFolderId}
+                />
+              )}
 
             {!loading &&
               !loadingFolder &&
               !error &&
               !folderError &&
-              visibleMedia.length === 0 && (
+              filteredAndSortedMedia.length === 0 &&
+              !(
+                media.length === 0 &&
+                selectedStatus === null &&
+                selectedFolderId === null
+              ) && (
                 <div className="border border-dashed border-gray-800 bg-gray-900/40 p-12 text-center">
                   <h3 className="text-lg font-semibold text-gray-300">
                     No media found
                   </h3>
                   <p className="mt-2 text-sm text-gray-500">
-                    {selectedFolderId !== null
-                      ? "This folder has no media items yet."
-                      : selectedStatus !== null
-                        ? "No media items have this status."
-                        : "Movies, shows and books will appear here."}
+                    {visibleMedia.length > 0
+                      ? "Try changing your search or filters."
+                      : selectedFolderId !== null
+                        ? "This folder has no media items yet."
+                        : "No media items have this status."}
                   </p>
                 </div>
               )}
 
-            {!loading &&
-              !loadingFolder &&
-              !error &&
-              !folderError &&
-              visibleMedia.length > 0 && (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {visibleMedia.map((item) => (
-                    <MediaCard
-                      key={item.id}
-                      media={item}
-                      sourceFolderId={selectedFolderId}
-                      onClick={() => setSelectedMedia(item)}
-                    />
-                  ))}
-                </div>
-              )}
+            {selectedFolderId !== null && isMediaDragging && (
+              <div
+                onDragEnter={handleRemoveDropDragEnter}
+                onDragOver={handleRemoveDropDragOver}
+                onDragLeave={handleRemoveDropDragLeave}
+                onDrop={(event) => void handleRemoveDrop(event)}
+                className={`mt-6 flex min-h-16 w-full items-center justify-center border-2 border-dashed px-6 text-sm font-semibold transition ${
+                  isRemoveDropActive
+                    ? "border-red-400 bg-red-500/10 text-red-300 shadow-[0_0_24px_rgba(248,113,113,0.08)]"
+                    : "border-gray-800 bg-gray-900/30 text-gray-600"
+                }`}
+              >
+                {isRemoveDropActive
+                  ? "Release to remove from folder"
+                  : "Drag here to remove from folder"}
+              </div>
+            )}
           </section>
         </main>
       </div>
