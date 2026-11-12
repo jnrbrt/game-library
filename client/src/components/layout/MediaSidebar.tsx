@@ -46,9 +46,9 @@ const MEDIA_TYPES: {
   label: string;
   color: string;
 }[] = [
-  { value: "movie", label: "Movie", color: "bg-gray-500" },
-  { value: "series", label: "Show", color: "bg-red-400" },
-  { value: "book", label: "Book", color: "bg-green-400" },
+  { value: "movie", label: "Movie", color: "bg-[#800020]" },
+  { value: "series", label: "Show", color: "bg-[#228B22]" },
+  { value: "book", label: "Book", color: "bg-[#1E3A5F]" },
 ];
 
 function getMaxSidebarWidth() {
@@ -303,7 +303,7 @@ function MediaSidebar({
             </div>
           </div>
 
-          <nav className="flex-1 overflow-auto px-6 py-4">
+          <nav className="flex-1 overflow-auto px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
               onClick={() => {

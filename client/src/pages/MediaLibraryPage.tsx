@@ -587,8 +587,8 @@ function MediaLibraryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
-      <div className="flex min-h-screen">
+    <div className="h-dvh overflow-hidden bg-gray-950 text-gray-100">
+      <div className="flex h-full min-h-0">
         <MediaSidebar
           user={user}
           folders={folders}
@@ -635,7 +635,7 @@ function MediaLibraryPage() {
           onLogout={handleLogout}
         />
 
-        <main className="min-w-0 flex-1">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <LibraryHeader
             breadcrumbs={breadcrumbs}
             onBreadcrumbClick={(folderId) => {
@@ -648,11 +648,7 @@ function MediaLibraryPage() {
             addButtonLabel="Add Media"
           />
 
-          <section
-            className="w-full px-6 py-8"
-            onDragStart={handleLibraryDragStart}
-            onDragEnd={handleLibraryDragEnd}
-          >
+          <div className="shrink-0 px-6 pt-8">
             <MediaToolbar
               searchQuery={searchQuery}
               onSearchQueryChange={setSearchQuery}
@@ -674,7 +670,13 @@ function MediaLibraryPage() {
               sortOption={sortOption}
               onSortChange={setSortOption}
             />
+          </div>
 
+          <section
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            onDragStart={handleLibraryDragStart}
+            onDragEnd={handleLibraryDragEnd}
+          >
             {!loading && error && (
               <p className="text-sm text-red-400">{error}</p>
             )}

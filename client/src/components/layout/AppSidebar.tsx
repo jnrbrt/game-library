@@ -273,7 +273,7 @@ function AppSidebar({
             </div>
           </div>
 
-          <nav className="flex-1 overflow-auto px-6 py-4">
+          <nav className="flex-1 overflow-auto px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
               onClick={() => {
