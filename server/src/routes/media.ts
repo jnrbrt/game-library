@@ -6,6 +6,7 @@ import {
   createMediaSchema,
   updateMediaSchema,
 } from "../media/media-schemas.js";
+import { folderMediaRepository } from "../media/folder-media-repository.js";
 
 export const mediaRoutes = async (app: FastifyInstance): Promise<void> => {
   // Get all media belonging to the current user
@@ -96,6 +97,13 @@ export const mediaRoutes = async (app: FastifyInstance): Promise<void> => {
       return reply.code(404).send({
         error: "Media not found.",
       });
+    }
+
+    // Remove all folder relations before deleting the media item.
+    const mediaFolders = await folderMediaRepository.getFoldersForMedia(id);
+
+    for (const relation of mediaFolders) {
+      await folderMediaRepository.remove(relation.folderId, id);
     }
 
     await mediaRepository.delete(id);

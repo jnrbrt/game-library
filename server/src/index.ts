@@ -6,6 +6,7 @@ import { gameRoutes } from "./routes/games.js";
 import { folderRoutes } from "./routes/folders.js";
 import cors from "@fastify/cors";
 import { mediaRoutes } from "./routes/media.js";
+import { mediaFolderRoutes } from "./routes/media-folders.js";
 
 const app = Fastify({
   logger: true,
@@ -32,6 +33,8 @@ await app.register(folderRoutes, {
 });
 
 await app.register(mediaRoutes, { prefix: "/api/media" });
+
+await app.register(mediaFolderRoutes, { prefix: "/api/media-folders" });
 
 app.get("/api/health", async () => {
   return {
