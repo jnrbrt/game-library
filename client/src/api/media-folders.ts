@@ -46,6 +46,7 @@ export const updateMediaFolder = async (
 export const deleteMediaFolder = async (id: string): Promise<void> => {
   await apiClient<{ success: boolean }>(`/media-folders/${id}`, {
     method: "DELETE",
+    body: JSON.stringify({}),
   });
 };
 
@@ -65,6 +66,7 @@ export const addMediaToFolder = async (
     `/media-folders/${folderId}/media/${mediaId}`,
     {
       method: "POST",
+      body: JSON.stringify({}),
     },
   );
 };
@@ -78,6 +80,7 @@ export const removeMediaFromFolder = async (
     `/media-folders/${folderId}/media/${mediaId}`,
     {
       method: "DELETE",
+      body: JSON.stringify({}),
     },
   );
 };

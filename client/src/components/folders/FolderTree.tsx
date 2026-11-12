@@ -19,6 +19,7 @@ interface FolderTreeProps {
   onDeleteCancel: () => void;
   isDeletingFolder: boolean;
   onGameDrop: (folderId: string, gameId: string) => void;
+  onMediaDrop?: (folderId: string, mediaId: string) => void;
   onFolderDrop: (folderId: string, sourceFolderId: string) => void;
   onFolderDropToRoot: (sourceFolderId: string) => void;
 }
@@ -43,6 +44,7 @@ interface FolderNodeProps {
   onDeleteCancel: () => void;
   isDeletingFolder: boolean;
   onGameDrop: (folderId: string, gameId: string) => void;
+  onMediaDrop?: (folderId: string, mediaId: string) => void;
   onFolderDrop: (folderId: string, sourceFolderId: string) => void;
 }
 
@@ -66,6 +68,7 @@ function FolderNode({
   onDeleteCancel,
   isDeletingFolder,
   onGameDrop,
+  onMediaDrop,
   onFolderDrop,
 }: FolderNodeProps) {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -85,7 +88,8 @@ function FolderNode({
 
     if (
       !types.includes("application/x-game-id") &&
-      !types.includes("application/x-folder-id")
+      !types.includes("application/x-folder-id") &&
+      !(onMediaDrop && types.includes("application/x-media-id"))
     ) {
       return;
     }
@@ -99,7 +103,8 @@ function FolderNode({
 
     if (
       !types.includes("application/x-game-id") &&
-      !types.includes("application/x-folder-id")
+      !types.includes("application/x-folder-id") &&
+      !(onMediaDrop && types.includes("application/x-media-id"))
     ) {
       return;
     }
@@ -135,6 +140,13 @@ function FolderNode({
       }
 
       onFolderDrop(folder.id, sourceFolderId);
+      return;
+    }
+
+    const mediaId = event.dataTransfer.getData("application/x-media-id");
+
+    if (mediaId && onMediaDrop) {
+      onMediaDrop(folder.id, mediaId);
       return;
     }
 
@@ -358,6 +370,7 @@ function FolderNode({
           onDeleteCancel={onDeleteCancel}
           isDeletingFolder={isDeletingFolder}
           onGameDrop={onGameDrop}
+          onMediaDrop={onMediaDrop}
           onFolderDrop={onFolderDrop}
         />
       ))}
@@ -383,6 +396,7 @@ function FolderTree({
   onDeleteCancel,
   isDeletingFolder,
   onGameDrop,
+  onMediaDrop,
   onFolderDrop,
   onFolderDropToRoot,
 }: FolderTreeProps) {
@@ -466,6 +480,7 @@ function FolderTree({
           onDeleteCancel={onDeleteCancel}
           isDeletingFolder={isDeletingFolder}
           onGameDrop={onGameDrop}
+          onMediaDrop={onMediaDrop}
           onFolderDrop={onFolderDrop}
         />
       ))}

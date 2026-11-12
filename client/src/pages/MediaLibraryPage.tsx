@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
+import { logout } from "../api/auth";
+import { useAuth } from "../auth/AuthContext";
 import {
   createMedia,
   deleteMedia,
@@ -10,38 +13,60 @@ import {
   type MediaStatus,
   type MediaType,
 } from "../api/media";
+import {
+  addMediaToFolder,
+  getMediaFolders,
+  getMediaInFolder,
+  updateMediaFolder,
+  type MediaFolder,
+} from "../api/media-folders";
 
-import { getMediaFolders, type MediaFolder } from "../api/media-folders";
-
+import MediaSidebar from "../components/layout/MediaSidebar";
 import MediaCard from "../components/media/MediaCard";
 import AddMediaModal from "../components/media/AddMediaModal";
 import MediaDetailsModal from "../components/media/MediaDetailsModal";
 
+const STATUS_LABELS: Record<MediaStatus, string> = {
+  finished: "Finished",
+  ongoing: "Ongoing",
+  paused: "Paused",
+  dropped: "Dropped",
+  "waiting-list": "Waiting List",
+};
+
 function MediaLibraryPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [folders, setFolders] = useState<MediaFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<MediaStatus | null>(
+    null,
+  );
+  const [folderMediaIds, setFolderMediaIds] = useState<string[]>([]);
+  const [loadingFolder, setLoadingFolder] = useState(false);
+  const [folderError, setFolderError] = useState("");
+  const [folderRefreshVersion, setFolderRefreshVersion] = useState(0);
+
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
 
-  // Add / Edit modal
   const [isAddMediaOpen, setIsAddMediaOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [editingMediaId, setEditingMediaId] = useState<string | null>(null);
 
-  // Form
   const [title, setTitle] = useState("");
   const [type, setType] = useState<MediaType>("movie");
   const [genres, setGenres] = useState<MediaGenre[]>([]);
   const [status, setStatus] = useState<MediaStatus>("ongoing");
   const [score, setScore] = useState("");
   const [description, setDescription] = useState("");
-
   const [savingMedia, setSavingMedia] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // Initial loading
   useEffect(() => {
     let active = true;
 
@@ -79,16 +104,129 @@ function MediaLibraryPage() {
     };
   }, []);
 
+  // Keep a folder's visible items in sync with folder selection and changes.
+  useEffect(() => {
+    let active = true;
+
+    const loadFolderMedia = async () => {
+      if (selectedFolderId === null) {
+        setFolderMediaIds([]);
+        setLoadingFolder(false);
+        setFolderError("");
+        return;
+      }
+
+      setLoadingFolder(true);
+      setFolderMediaIds([]);
+      setFolderError("");
+
+      try {
+        const items = await getMediaInFolder(selectedFolderId);
+
+        if (active) {
+          setFolderMediaIds(items.map((item) => item.id));
+        }
+      } catch (err) {
+        console.error(err);
+
+        if (active) {
+          setFolderError("Failed to load this folder.");
+        }
+      } finally {
+        if (active) {
+          setLoadingFolder(false);
+        }
+      }
+    };
+
+    void loadFolderMedia();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedFolderId, folderRefreshVersion]);
+
+  const visibleMedia = useMemo(() => {
+    const folderIds = new Set(folderMediaIds);
+
+    return media.filter((item) => {
+      if (selectedFolderId !== null && !folderIds.has(item.id)) {
+        return false;
+      }
+
+      if (selectedStatus !== null && item.status !== selectedStatus) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [media, folderMediaIds, selectedFolderId, selectedStatus]);
+
+  const currentFolder = folders.find(
+    (folder) => folder.id === selectedFolderId,
+  );
+  const pageTitle =
+    selectedStatus !== null
+      ? STATUS_LABELS[selectedStatus]
+      : selectedFolderId !== null
+        ? (currentFolder?.name ?? "Folder")
+        : "Library";
+
   const refreshFolders = async () => {
     try {
-      const data = await getMediaFolders();
-      setFolders(data);
+      setFolders(await getMediaFolders());
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Form helpers
+  const refreshFolderContent = () => {
+    setFolderRefreshVersion((current) => current + 1);
+  };
+
+  const handleFolderDrop = async (
+    targetFolderId: string,
+    sourceFolderId: string,
+  ) => {
+    try {
+      await updateMediaFolder(sourceFolderId, {
+        parentId: targetFolderId,
+      });
+      await refreshFolders();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleFolderDropToRoot = async (sourceFolderId: string) => {
+    try {
+      await updateMediaFolder(sourceFolderId, { parentId: null });
+      await refreshFolders();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleMediaDrop = async (folderId: string, mediaId: string) => {
+    try {
+      await addMediaToFolder(folderId, mediaId);
+      await refreshFolders();
+
+      // Refresh the visible items if the target folder is currently open.
+      if (selectedFolderId === folderId) {
+        refreshFolderContent();
+      }
+    } catch (err) {
+      console.error(err);
+      window.alert("Media could not be added to this folder.");
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
+
   const resetForm = () => {
     setTitle("");
     setType("movie");
@@ -117,14 +255,12 @@ function MediaLibraryPage() {
   const openEditMedia = (item: MediaItem) => {
     setModalMode("edit");
     setEditingMediaId(item.id);
-
     setTitle(item.title);
     setType(item.type);
     setGenres([...item.genres]);
     setStatus(item.status);
     setScore(item.score !== undefined ? String(item.score) : "");
     setDescription(item.description ?? "");
-
     setFormError("");
     setSelectedMedia(null);
     setIsAddMediaOpen(true);
@@ -139,7 +275,6 @@ function MediaLibraryPage() {
     resetForm();
   };
 
-  // Add / Edit media
   const handleSubmitMedia = async () => {
     if (savingMedia) {
       return;
@@ -215,7 +350,6 @@ function MediaLibraryPage() {
         );
       } else {
         const created = await createMedia(input);
-
         setMedia((current) => [...current, created]);
       }
 
@@ -223,7 +357,6 @@ function MediaLibraryPage() {
       resetForm();
     } catch (err) {
       console.error(err);
-
       setFormError(
         modalMode === "edit"
           ? "Media could not be updated. Please try again."
@@ -234,7 +367,6 @@ function MediaLibraryPage() {
     }
   };
 
-  // Delete media
   const handleDeleteMedia = async () => {
     if (!selectedMedia) {
       return;
@@ -244,11 +376,10 @@ function MediaLibraryPage() {
 
     try {
       await deleteMedia(mediaId);
-
       setMedia((current) => current.filter((item) => item.id !== mediaId));
-
       setSelectedMedia(null);
       await refreshFolders();
+      refreshFolderContent();
     } catch (err) {
       console.error(err);
       window.alert("Media could not be deleted. Please try again.");
@@ -257,58 +388,132 @@ function MediaLibraryPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
-      {/* Header */}
-      <header className="flex items-center justify-between gap-4 border-b border-gray-800 px-6 py-5">
-        <h1 className="text-2xl font-bold text-white">Media Library</h1>
+      <div className="flex min-h-screen">
+        <MediaSidebar
+          user={user}
+          folders={folders}
+          allMedia={media}
+          selectedFolderId={selectedFolderId}
+          selectedStatus={selectedStatus}
+          onFolderSelect={(folderId) => {
+            setSelectedFolderId(folderId);
+            if (folderId !== null) {
+              setSelectedStatus(null);
+            }
+          }}
+          onStatusSelect={(nextStatus) => {
+            setSelectedStatus(nextStatus);
+            if (nextStatus !== null) {
+              setSelectedFolderId(null);
+            }
+          }}
+          onFolderCreated={(folder) => {
+            setFolders((current) => [...current, folder]);
+          }}
+          onFolderUpdated={(folder) => {
+            setFolders((current) =>
+              current.map((item) => (item.id === folder.id ? folder : item)),
+            );
+          }}
+          onFolderDeleted={(folderId) => {
+            setFolders((current) =>
+              current.filter((folder) => folder.id !== folderId),
+            );
+            if (selectedFolderId === folderId) {
+              setSelectedFolderId(null);
+            }
+          }}
+          onFolderDrop={(folderId, sourceFolderId) => {
+            void handleFolderDrop(folderId, sourceFolderId);
+          }}
+          onFolderDropToRoot={(sourceFolderId) => {
+            void handleFolderDropToRoot(sourceFolderId);
+          }}
+          onMediaDrop={(folderId, mediaId) => {
+            void handleMediaDrop(folderId, mediaId);
+          }}
+          onLogout={handleLogout}
+        />
 
-        <button
-          type="button"
-          onClick={openAddMedia}
-          className="bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
-        >
-          + Add Media
-        </button>
-      </header>
+        <main className="min-w-0 flex-1">
+          <header className="flex items-center justify-between gap-4 border-b border-gray-800 px-6 py-5">
+            <h1 className="min-w-0 truncate text-2xl font-bold text-white">
+              {pageTitle}
+            </h1>
 
-      {/* Content */}
-      <main className="px-6 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-200">All Media</h2>
+            <button
+              type="button"
+              onClick={openAddMedia}
+              className="shrink-0 bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
+            >
+              + Add Media
+            </button>
+          </header>
 
-          <span className="text-sm text-gray-500">{media.length} items</span>
-        </div>
+          <section className="px-6 py-8">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-200">
+                {selectedFolderId !== null || selectedStatus !== null
+                  ? pageTitle
+                  : "All Media"}
+              </h2>
 
-        {loading && <p className="text-sm text-gray-500">Loading media...</p>}
+              <span className="text-sm text-gray-500">
+                {visibleMedia.length} items
+              </span>
+            </div>
 
-        {!loading && error && <p className="text-sm text-red-400">{error}</p>}
+            {(loading || loadingFolder) && (
+              <p className="text-sm text-gray-500">Loading media...</p>
+            )}
 
-        {!loading && !error && media.length === 0 && (
-          <div className="border border-dashed border-gray-800 bg-gray-900/40 p-12 text-center">
-            <h3 className="text-lg font-semibold text-gray-300">
-              Your media library is empty
-            </h3>
+            {!loading && error && (
+              <p className="text-sm text-red-400">{error}</p>
+            )}
 
-            <p className="mt-2 text-sm text-gray-500">
-              Movies, shows and books will appear here.
-            </p>
-          </div>
-        )}
+            {!loading && folderError && (
+              <p className="text-sm text-red-400">{folderError}</p>
+            )}
 
-        {!loading && !error && media.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {media.map((item) => (
-              <MediaCard
-                key={item.id}
-                media={item}
-                sourceFolderId={null}
-                onClick={() => setSelectedMedia(item)}
-              />
-            ))}
-          </div>
-        )}
-      </main>
+            {!loading &&
+              !loadingFolder &&
+              !error &&
+              !folderError &&
+              visibleMedia.length === 0 && (
+                <div className="border border-dashed border-gray-800 bg-gray-900/40 p-12 text-center">
+                  <h3 className="text-lg font-semibold text-gray-300">
+                    No media found
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-500">
+                    {selectedFolderId !== null
+                      ? "This folder has no media items yet."
+                      : selectedStatus !== null
+                        ? "No media items have this status."
+                        : "Movies, shows and books will appear here."}
+                  </p>
+                </div>
+              )}
 
-      {/* Media Details */}
+            {!loading &&
+              !loadingFolder &&
+              !error &&
+              !folderError &&
+              visibleMedia.length > 0 && (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {visibleMedia.map((item) => (
+                    <MediaCard
+                      key={item.id}
+                      media={item}
+                      sourceFolderId={selectedFolderId}
+                      onClick={() => setSelectedMedia(item)}
+                    />
+                  ))}
+                </div>
+              )}
+          </section>
+        </main>
+      </div>
+
       {selectedMedia && (
         <MediaDetailsModal
           media={selectedMedia}
@@ -318,11 +523,11 @@ function MediaLibraryPage() {
           onDelete={() => void handleDeleteMedia()}
           onFoldersChanged={() => {
             void refreshFolders();
+            refreshFolderContent();
           }}
         />
       )}
 
-      {/* Add / Edit Media */}
       <AddMediaModal
         isOpen={isAddMediaOpen}
         mode={modalMode}
