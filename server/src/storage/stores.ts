@@ -1,4 +1,5 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type {
   User,
@@ -6,13 +7,11 @@ import type {
   Folder,
   FolderGame,
   Session,
+  MediaItem,
 } from "../types/models.js";
 
 import { JsonStore } from "./json-store.js";
-
 import { Repository } from "./repository.js";
-
-import { fileURLToPath } from "node:url";
 
 const dataDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -25,6 +24,10 @@ export const usersStore = new JsonStore<User[]>(
 
 export const gamesStore = new JsonStore<Game[]>(
   path.join(dataDirectory, "games.json"),
+);
+
+export const mediaStore = new JsonStore<MediaItem[]>(
+  path.join(dataDirectory, "media.json"),
 );
 
 export const foldersStore = new JsonStore<Folder[]>(
