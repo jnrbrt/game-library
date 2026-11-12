@@ -7,6 +7,7 @@ import {
   updateMediaSchema,
 } from "../media/media-schemas.js";
 import { folderMediaRepository } from "../media/folder-media-repository.js";
+import { mediaFolderRepository } from "../media/media-folder-repository.js";
 
 export const mediaRoutes = async (app: FastifyInstance): Promise<void> => {
   // Get all media belonging to the current user
@@ -38,6 +39,34 @@ export const mediaRoutes = async (app: FastifyInstance): Promise<void> => {
     });
 
     return reply.code(201).send(media);
+  });
+
+  // Get folders containing a media item
+  app.get("/:id/folders", async (request, reply) => {
+    const userId = await requireAuth(request);
+
+    const { id } = request.params as { id: string };
+
+    const media = await mediaRepository.getById(id);
+
+    if (!media || media.ownerId !== userId) {
+      return reply.code(404).send({
+        error: "Media not found.",
+      });
+    }
+
+    const relations = await folderMediaRepository.getFoldersForMedia(id);
+
+    const folders = await Promise.all(
+      relations.map((relation) =>
+        mediaFolderRepository.getById(relation.folderId),
+      ),
+    );
+
+    return folders.filter(
+      (folder): folder is NonNullable<typeof folder> =>
+        folder !== undefined && folder.ownerId === userId,
+    );
   });
 
   // Get a single media item
@@ -80,7 +109,16 @@ export const mediaRoutes = async (app: FastifyInstance): Promise<void> => {
       });
     }
 
-    const updatedMedia = await mediaRepository.update(id, result.data);
+    const { score, ...otherUpdates } = result.data;
+
+    const updates = {
+      ...otherUpdates,
+      ...(score !== undefined
+        ? { score: score === null ? undefined : score }
+        : {}),
+    };
+
+    const updatedMedia = await mediaRepository.update(id, updates);
 
     return updatedMedia;
   });

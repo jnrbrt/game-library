@@ -56,4 +56,6 @@ export const createMediaSchema = z.object({
   description: z.string().trim().max(5000).optional(),
 });
 
-export const updateMediaSchema = createMediaSchema.partial();
+export const updateMediaSchema = createMediaSchema.partial().extend({
+  score: createMediaSchema.shape.score.nullable(),
+});
