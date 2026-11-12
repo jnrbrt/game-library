@@ -85,3 +85,52 @@ export interface FolderGame {
   folderId: string;
   gameId: string;
 }
+
+export type MediaType = "movie" | "series" | "book";
+
+export type MediaStatus =
+  | "finished"
+  | "ongoing"
+  | "paused"
+  | "dropped"
+  | "waiting-list";
+
+export type MediaGenre =
+  | "action"
+  | "adventure"
+  | "animation"
+  | "comedy"
+  | "crime"
+  | "documentary"
+  | "drama"
+  | "fantasy"
+  | "historical"
+  | "horror"
+  | "mystery"
+  | "romance"
+  | "sci-fi"
+  | "thriller"
+  | "war"
+  | "western"
+  | "biography"
+  | "family"
+  | "musical"
+  | "supernatural"
+  | "slice-of-life";
+
+export interface MediaItem {
+  id: string;
+  ownerId: string;
+  title: string;
+  type: MediaType;
+  genres: MediaGenre[];
+  status: MediaStatus;
+  score?: number;
+  description?: string;
+  createdAt: string;
+}
+
+export interface FolderMedia {
+  folderId: string;
+  mediaId: string;
+}

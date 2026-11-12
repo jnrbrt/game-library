@@ -9,6 +9,7 @@ interface LibraryHeaderProps {
   viewMode: "grid" | "list";
   onViewModeChange: (viewMode: "grid" | "list") => void;
   onAddGame: () => void;
+  addButtonLabel?: string;
 }
 
 function LibraryHeader({
@@ -17,6 +18,7 @@ function LibraryHeader({
   viewMode,
   onViewModeChange,
   onAddGame,
+  addButtonLabel = "Add Game",
 }: LibraryHeaderProps) {
   return (
     <header className="bg-gray-950 px-6 py-5">
@@ -71,7 +73,7 @@ function LibraryHeader({
             onClick={onAddGame}
             className="bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
           >
-            + Add Game
+            + {addButtonLabel}
           </button>
         </div>
       </div>

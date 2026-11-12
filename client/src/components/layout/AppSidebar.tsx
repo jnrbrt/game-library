@@ -4,6 +4,7 @@ import type { AuthUser } from "../../api/auth";
 import type { Folder } from "../../api/folders";
 import type { Game, GameStatus } from "../../api/games";
 import FolderTree from "../folders/FolderTree";
+import LibrarySwitcher from "./LibrarySwitcher";
 
 interface AppSidebarProps {
   user: AuthUser | null;
@@ -258,9 +259,7 @@ function AppSidebar({
         <>
           <div className="px-6 py-5">
             <div className="flex items-center justify-between gap-3">
-              <h1 className="min-w-0 truncate text-2xl font-bold text-white">
-                Game Library
-              </h1>
+              <LibrarySwitcher />
 
               <button
                 type="button"
@@ -274,7 +273,7 @@ function AppSidebar({
             </div>
           </div>
 
-          <nav className="flex-1 overflow-auto px-6 py-4">
+          <nav className="flex-1 overflow-auto px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
               onClick={() => {

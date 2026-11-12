@@ -625,8 +625,8 @@ function LibraryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
-      <div className="flex min-h-screen">
+    <div className="h-dvh overflow-hidden bg-gray-950 text-gray-100">
+      <div className="flex h-full min-h-0">
         <AppSidebar
           user={user}
           folders={folders}
@@ -674,7 +674,7 @@ function LibraryPage() {
           onLogout={handleLogout}
         />
 
-        <main className="min-w-0 flex-1">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <LibraryHeader
             breadcrumbs={breadcrumbs}
             onBreadcrumbClick={(folderId) => {
@@ -690,11 +690,7 @@ function LibraryPage() {
             }}
           />
 
-          <section
-            className="w-full px-6 py-8"
-            onDragStart={handleLibraryDragStart}
-            onDragEnd={handleLibraryDragEnd}
-          >
+          <div className="shrink-0 px-6 pt-8">
             <LibraryToolbar
               searchQuery={searchQuery}
               onSearchQueryChange={setSearchQuery}
@@ -717,7 +713,13 @@ function LibraryPage() {
               sortOption={sortOption}
               onSortChange={setSortOption}
             />
+          </div>
 
+          <section
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            onDragStart={handleLibraryDragStart}
+            onDragEnd={handleLibraryDragEnd}
+          >
             <LibraryContent
               games={filteredAndSortedGames}
               loadingGames={loadingGames}

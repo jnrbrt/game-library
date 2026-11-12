@@ -3,12 +3,14 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import LoginPage from "./pages/LoginPage";
 import LibraryPage from "./pages/LibraryPage";
+import MediaLibraryPage from "./pages/MediaLibraryPage";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+
         <Route
           path="/"
           element={
@@ -17,6 +19,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/media"
+          element={
+            <ProtectedRoute>
+              <MediaLibraryPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

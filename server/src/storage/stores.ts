@@ -1,18 +1,18 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type {
   User,
   Game,
   Folder,
   FolderGame,
+  FolderMedia,
   Session,
+  MediaItem,
 } from "../types/models.js";
 
 import { JsonStore } from "./json-store.js";
-
 import { Repository } from "./repository.js";
-
-import { fileURLToPath } from "node:url";
 
 const dataDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -27,12 +27,24 @@ export const gamesStore = new JsonStore<Game[]>(
   path.join(dataDirectory, "games.json"),
 );
 
+export const mediaStore = new JsonStore<MediaItem[]>(
+  path.join(dataDirectory, "media.json"),
+);
+
 export const foldersStore = new JsonStore<Folder[]>(
   path.join(dataDirectory, "folders.json"),
 );
 
+export const mediaFoldersStore = new JsonStore<Folder[]>(
+  path.join(dataDirectory, "media-folders.json"),
+);
+
 export const folderGamesStore = new JsonStore<FolderGame[]>(
   path.join(dataDirectory, "folder-games.json"),
+);
+
+export const folderMediaStore = new JsonStore<FolderMedia[]>(
+  path.join(dataDirectory, "folder-media.json"),
 );
 
 export const usersRepository = new Repository<User>(usersStore);

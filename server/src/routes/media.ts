@@ -1,0 +1,153 @@
+import type { FastifyInstance } from "fastify";
+
+import { requireAuth } from "../auth/require-auth.js";
+import { mediaRepository } from "../media/media-repository.js";
+import {
+  createMediaSchema,
+  updateMediaSchema,
+} from "../media/media-schemas.js";
+import { folderMediaRepository } from "../media/folder-media-repository.js";
+import { mediaFolderRepository } from "../media/media-folder-repository.js";
+
+export const mediaRoutes = async (app: FastifyInstance): Promise<void> => {
+  // Get all media belonging to the current user
+  app.get("/", async (request) => {
+    const userId = await requireAuth(request);
+
+    const media = await mediaRepository.getAll();
+
+    return media.filter((item) => item.ownerId === userId);
+  });
+
+  // Create a new media item
+  app.post("/", async (request, reply) => {
+    const userId = await requireAuth(request);
+
+    const result = createMediaSchema.safeParse(request.body);
+
+    if (!result.success) {
+      return reply.code(400).send({
+        error: "Invalid media data.",
+        details: result.error.issues,
+      });
+    }
+
+    const media = await mediaRepository.create({
+      ownerId: userId,
+      ...result.data,
+      createdAt: new Date().toISOString(),
+    });
+
+    return reply.code(201).send(media);
+  });
+
+  // Get folders containing a media item
+  app.get("/:id/folders", async (request, reply) => {
+    const userId = await requireAuth(request);
+
+    const { id } = request.params as { id: string };
+
+    const media = await mediaRepository.getById(id);
+
+    if (!media || media.ownerId !== userId) {
+      return reply.code(404).send({
+        error: "Media not found.",
+      });
+    }
+
+    const relations = await folderMediaRepository.getFoldersForMedia(id);
+
+    const folders = await Promise.all(
+      relations.map((relation) =>
+        mediaFolderRepository.getById(relation.folderId),
+      ),
+    );
+
+    return folders.filter(
+      (folder): folder is NonNullable<typeof folder> =>
+        folder !== undefined && folder.ownerId === userId,
+    );
+  });
+
+  // Get a single media item
+  app.get("/:id", async (request, reply) => {
+    const userId = await requireAuth(request);
+
+    const { id } = request.params as { id: string };
+
+    const media = await mediaRepository.getById(id);
+
+    if (!media || media.ownerId !== userId) {
+      return reply.code(404).send({
+        error: "Media not found.",
+      });
+    }
+
+    return media;
+  });
+
+  // Update an existing media item
+  app.patch("/:id", async (request, reply) => {
+    const userId = await requireAuth(request);
+
+    const { id } = request.params as { id: string };
+
+    const result = updateMediaSchema.safeParse(request.body);
+
+    if (!result.success) {
+      return reply.code(400).send({
+        error: "Invalid media data.",
+        details: result.error.issues,
+      });
+    }
+
+    const media = await mediaRepository.getById(id);
+
+    if (!media || media.ownerId !== userId) {
+      return reply.code(404).send({
+        error: "Media not found.",
+      });
+    }
+
+    const { score, ...otherUpdates } = result.data;
+
+    const updates = {
+      ...otherUpdates,
+      ...(score !== undefined
+        ? { score: score === null ? undefined : score }
+        : {}),
+    };
+
+    const updatedMedia = await mediaRepository.update(id, updates);
+
+    return updatedMedia;
+  });
+
+  // Delete a media item
+  app.delete("/:id", async (request, reply) => {
+    const userId = await requireAuth(request);
+
+    const { id } = request.params as { id: string };
+
+    const media = await mediaRepository.getById(id);
+
+    if (!media || media.ownerId !== userId) {
+      return reply.code(404).send({
+        error: "Media not found.",
+      });
+    }
+
+    // Remove all folder relations before deleting the media item.
+    const mediaFolders = await folderMediaRepository.getFoldersForMedia(id);
+
+    for (const relation of mediaFolders) {
+      await folderMediaRepository.remove(relation.folderId, id);
+    }
+
+    await mediaRepository.delete(id);
+
+    return {
+      success: true,
+    };
+  });
+};
